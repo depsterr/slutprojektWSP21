@@ -11,13 +11,13 @@ Alla konton ska ha ett användarnamn, en profil bild, och en liten "footer" som 
 ## 2. Vyer (visa bildskisser på dina sidor).
 
 ### Tidig hem vy som visar kategorier (så kallade boards), hur många nya trådar som finns där, och vilken administratör som skapade det boardet
-[home](misc/img/home.png)
+![home](misc/img/home.png)
 
 ### Tidig Board vy som visar trådar, hur många nya replies det finns på posten och vilken användare som skapat tråden
-[board](misc/img/board.png)
+![board](misc/img/board.png)
 
 ### Tidigt tråd vy som visar hur en tråd kan se ut, samt profil bild och användar footer
-[thread](misc/img/thread.png)
+![thread](misc/img/thread.png)
 
 ## 3. Databas med ER-diagram (Bild på ER-diagram).
 ## 4. Arkitektur (Beskriv filer och mappar - vad gör/innehåller de?).
