@@ -10,7 +10,7 @@ entity "User" as user {
 	UserId: number <<auto generated>>
 	UserName: string
 	UserFooter: string
-	UserPrivilege: number //admin level
+	UserPrivilege: number
 	UserRegistrationDate: date
 }
 
@@ -31,6 +31,7 @@ hash --> userhash
 
 entity "Image" as image {
 	ImageId: number <<auto generated>>
+	ImageMD5: MD5 hash
 	ImageFilepath: string
 }
 
