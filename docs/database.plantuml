@@ -4,7 +4,7 @@
 
 hide circle
 skinparam linetype ortho
-left to right direction
+' left to right direction
 
 entity "User" as user {
 	UserId: number <<auto generated>>
@@ -17,17 +17,10 @@ entity "User" as user {
 entity "Hash" as hash {
 	HashId: number <<auto generated>>
 	Hash: bcrypt hash
-}
-
-entity "UserHashRelation" as userhash {
 	UserId: number
-	HashId: number
 }
 
-note bottom : Do not store usernames next to hashes
-
-user --> userhash
-hash --> userhash
+hash --> user
 
 entity "Image" as image {
 	ImageId: number <<auto generated>>
@@ -49,44 +42,33 @@ entity "Board" as board {
 	BoardId: number <<auto generated>>
 	BoardName: string
 	BoardCreationDate: date
+	UserId: number
 }
+
+board --> user
 
 entity "Thread" as thread {
 	ThreadId: number <<auto generated>>
 	ThreadName: string
 	ThreadCreationDate: date
 	ThreadStickied: boolean
+	UserId: number
+	BoardId: number
 }
+
+thread --> user
+thread --> board
 
 entity "Post" as post {
 	PostId: number <<auto generated>>
 	PostContent: string
 	PostCreationDate: date
-}
-
-entity "BoardThreadRelation" as boardthread {
-	BoardId: number
-	ThreadId: number
-}
-
-board --> boardthread
-thread --> boardthread
-
-entity "PostThreadRelation" as postthread {
-	PostId: number
-	ThreadId: number
-}
-
-post --> postthread
-thread --> postthread
-
-entity "PostUserRelation" as postuser {
-	PostId: number
 	UserId: number
+	ThreadId: number
 }
 
-post --> postuser
-user --> postuser
+post --> user
+post --> thread
 
 entity "UserUnreadPost" as userunreadpost {
 	PostId: number
