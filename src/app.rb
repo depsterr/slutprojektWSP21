@@ -21,6 +21,7 @@ helpers do
   end
 end
 
+Dir.mkdir 'db' unless Dir.exists? 'db'
 db = DataBase.new "db/database.sqlite"
 
 get '/' do

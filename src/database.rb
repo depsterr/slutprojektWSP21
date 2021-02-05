@@ -83,7 +83,6 @@ class DataBase
   # @param name [String] the name of the table
   # @param members [String] the member declerations
   private def init_table name, members
-    puts "CREATE TABLE IF NOT EXISTS #{name} (#{members})"
     @db.execute "CREATE TABLE IF NOT EXISTS #{name} (#{members})"
   end
 end
