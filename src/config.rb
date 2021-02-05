@@ -1,1 +1,0 @@
-$SITENAME = "OpenForum.rb"

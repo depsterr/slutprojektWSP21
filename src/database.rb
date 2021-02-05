@@ -1,12 +1,13 @@
 require 'sqlite3'
 
-# This class is used to abstract away database operations
-#
-# Dates are stored as integers using unix epoch
-# Booleans are stored as 1/0 integers
-
+# This class is used to abstract away database operations.
+# Dates are stored as integers using unix epoch.
+# Booleans are stored as 1/0 integers.
 class DataBase
-  def initialize path 
+  # Create a new DataBase connection
+  # @param path [String] the path to the database file
+  # @return [DataBase]
+  public def initialize path 
     raise TypeError if path.class != String
     @db = Sqlite3::open path
     @db.results_as_hash = true
@@ -57,6 +58,18 @@ class DataBase
       "FOREIGN KEY(ThreadId) REFERENCES Thread(ThreadId)"
   end
 
+  # Authenticate a user login
+  # @param user [String] the username
+  # @param pass [String] the password
+  # @return [Integer] user id
+  public def authenticate user, pass
+    # TODO add things
+    return 1
+  end
+
+  # Make sure a table exists
+  # @param name [String] the name of the table
+  # @param members [String] the member declerations
   private def init_table name, members
     @db.exec "CREATE TABLE IF NOT EXISTS #{name} (#{members})"
   end

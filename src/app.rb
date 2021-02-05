@@ -6,10 +6,10 @@ require 'slim/include' # enable "include" in templates
 require 'bcrypt'
 
 require_relative 'database.rb'
-
-$SITENAME = "forum.rb"
+require_relative 'validate.rb'
 
 helpers do
+  # @return  [String] the name of the current page
   def page_name
     if defined? docname
       docname
