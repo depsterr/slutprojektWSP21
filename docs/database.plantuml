@@ -4,7 +4,7 @@
 
 hide circle
 skinparam linetype ortho
-' left to right direction
+left to right direction
 
 entity "User" as user {
 	UserId: number <<auto generated>>
@@ -70,6 +70,14 @@ entity "Post" as post {
 post --> user
 post --> thread
 
+entity "UserWatchingPost" as userwatchingthread {
+	UserId: number
+	ThreadId: number
+}
+
+user --> userwatchingthread
+thread --> userwatchingthread
+
 entity "UserUnreadPost" as userunreadpost {
 	PostId: number
 	UserId: number
@@ -82,18 +90,5 @@ note bottom
 Add users watching threads to this to be
 able to notify users of unread posts.
 endnote
-
-entity "UserUnreadThread" as userunreadthread {
-	ThreadId: number
-	UserId: number
-}
-
-post --> userunreadthread
-thread --> userunreadthread
-
-note bottom
-Add users watching boards to this to be
-able to notify users of new threads.
-end note
 
 @enduml
