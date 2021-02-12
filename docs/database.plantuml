@@ -4,7 +4,13 @@
 
 hide circle
 skinparam linetype ortho
-left to right direction
+' left to right direction
+
+entity "Image" as image {
+	ImageId: number <<auto generated>>
+	ImageMD5: MD5 hash
+	ImageFilepath: string
+}
 
 entity "User" as user {
 	UserId: number <<auto generated>>
@@ -12,7 +18,10 @@ entity "User" as user {
 	UserFooter: string
 	UserPrivilege: number
 	UserRegistrationDate: date
+	ImageId: number
 }
+
+user --> image
 
 entity "Hash" as hash {
 	HashId: number <<auto generated>>
@@ -21,22 +30,6 @@ entity "Hash" as hash {
 }
 
 hash --> user
-
-entity "Image" as image {
-	ImageId: number <<auto generated>>
-	ImageMD5: MD5 hash
-	ImageFilepath: string
-}
-
-entity "UserImageRelation" as userimage {
-	UserId: number
-	ImageId: number
-}
-
-note bottom : Multiple users might use the same profile picture
-
-user --> userimage
-image --> userimage
 
 entity "Board" as board {
 	BoardId: number <<auto generated>>
