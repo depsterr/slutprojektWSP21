@@ -3,12 +3,9 @@
 require 'sinatra'
 require 'slim'
 require 'slim/include' # enable "include" in templates
-require 'bcrypt'
 
-require_relative 'database.rb'
-require_relative 'validate.rb'
-
-$SITENAME = "forum.rb"
+require_relative 'model.rb'
+require_relative 'view.rb'
 
 helpers do
   # @return [String] the name of the current page
@@ -16,13 +13,15 @@ helpers do
     if defined? docname
       docname
     else
-      $SITENAME
+      $sitename
     end
   end
 end
 
-Dir.mkdir 'db' unless Dir.exists? 'db'
+# Initialize our database
+Dir.mkdir "db" unless Dir.exists? "db"
 db = DataBase.new "db/database.sqlite"
+db.init
 
 get '/' do
   slim :index
