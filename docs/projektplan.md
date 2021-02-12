@@ -22,6 +22,6 @@ Alla konton ska ha ett användarnamn, en profil bild, och en liten "footer" som 
 ## 3. Databas med ER-diagram (Bild på ER-diagram).
 
 ### Databas diagram genererat av plantuml (se [database.plantuml](database.plantuml) för källkod)
-![database](misc/img/database.png)
+![database](misc/img/db.png)
 
 ## 4. Arkitektur (Beskriv filer och mappar - vad gör/innehåller de?).
