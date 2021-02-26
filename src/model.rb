@@ -223,7 +223,7 @@ class DataBase
   # @param thread [String] name of thread
   # @param board_id [String] board if to post to
   # @param caller_id [Integer] creator of thread
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def create_thread(thread, board_id, caller_id)
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
@@ -238,7 +238,7 @@ class DataBase
   # Delete a thread
   # @param thread_id [Integer] board to delete
   # @param caller_id [Integer] issuer of call
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def delete_thread(thread_id, caller_id)
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
@@ -256,7 +256,7 @@ class DataBase
   # @param content [String] content of post
   # @param thread_id [Integer] thread to post to
   # @param caller_id [Integer] creator of post
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def create_post(content, thread_id, caller_id)
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
@@ -283,7 +283,7 @@ class DataBase
   # Delete a post
   # @param post_id [Integer] post to delete
   # @param caller_id [Integer] issuer of call
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def delete_post(post_id, caller_id)
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
@@ -301,7 +301,7 @@ class DataBase
   # @param thread_id [Integer] thread to sticky
   # @param caller_id [Integer] issuer of call
   # @param sticky    [Bool] if true, thread is sticked, if false thread is unstickied
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def update_sticky_thread(thread_id, caller_id, sticky)
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
@@ -320,7 +320,7 @@ class DataBase
   # Start watching a thread
   # @param thread_id [Integer] thread to watch
   # @param caller_id [Integer] issuer of call
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def start_watching(thread_id, caller_id)
     return $error['NOTHREAD'] if get_thread(thread_id) == nil
     return $error['NOUSER'] if get_user(caller_id) == nil
@@ -335,7 +335,7 @@ class DataBase
   # Stop watching a thread
   # @param thread_id [Integer] thread to watch
   # @param caller_id [Integer] issuer of call
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def stop_watching(thread_id, caller_id)
     return $error['NOTHREAD'] if get_thread(thread_id) == nil
     return $error['NOUSER'] if get_user(caller_id) == nil
@@ -345,7 +345,7 @@ class DataBase
 
   # Get a list of unread posts
   # @param caller_id [Integer] issuer of call
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def get_unread(caller_id)
     return $error['NOUSER'] if get_user(caller_id) == nil
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
@@ -355,7 +355,7 @@ class DataBase
   # Mark a thread as unread
   # @param thread_id [Integer] thread to mark as read
   # @param caller_id [Integer] issuer of call
-  # @return [String,nil] returns error string on failure
+  # @return [nil,String] returns error string on failure
   public def mark_thread_read(thread_id, caller_id)
     return $error['NOTHREAD'] if get_thread(thread_id) == nil
     return $error['NOUSER'] if get_user(caller_id) == nil
