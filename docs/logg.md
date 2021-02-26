@@ -17,3 +17,11 @@ Idag så har jag jobabt vidare på min DataBase klass och implementerat metodern
 Jag har även omstrukturerat mitt project efter en MVC metodologi, min app.rb är nu controller.rb, jag har placerat all konfiguration och andra strängar i views.rb (error strängar och forum namn) och jag har flyttat min DataBase och Validator klass in i model.rb.
 
 Jag har även en liten lista på de andra CRUD metoder jag ska implementera i min DataBase class, varav de flesta är snabbare/lättare än de jag redan använt mig utav. Nästa lektion ska jag jobba mer med min model och implementera dessa, efter det ska jag bygga en sorts "API" med REST routes, efter detta ska jag skapa min "frontend" i form av slim filer.
+
+# Fredag 26e februari
+
+Idag så har jag implementerat databas metoder i min databas klass som klarar att skapa/ta bort boards, skapa/ta bort trådar och skapa/ta bort posts, stickiar threads, watchar och unwatchar threads, samt hämtar en lista av watchade threads.
+
+Någon jag kommit på idag är att jag inte "sanitizar" min input för html tags, vilket gör min hemsida till ett potentiellt offer för xss (cross site scripting), det är alltså något jag borde fixa. Jag har även fixat så att min timout funktion tar bort alla gammla entries när den kallas, detta förhindrar den från att ta en väldigt massa minne om många användare använder sidan då och då.
+
+Jag har även märkt att ON DELETE CASCADE inte fungerar... Så det får jag väl försöka fixa...
