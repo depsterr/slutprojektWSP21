@@ -30,8 +30,8 @@ end
 #  - [x] Create/Delete Post
 #  - [x] Sticky Thread
 #  - [x] [Un]watch Thread
-#  - [ ] Get unread
-#  - [ ] Mark unread read
+#  - [x] Get unread
+#  - [x] Mark unread read
 #  - [ ] Edit user settings
 #  - [ ] Return nil to be consistent (do what docs say)
 #  - [ ] Break permissions into seperate helper functions (perhaps prefixed with may_?)
@@ -40,7 +40,7 @@ class DataBase
   # Create a new DataBase connection
   # @param path [String] the path to the database file
   # @return [DataBase]
-  public def initialize(path)
+  public def initialize(path = "db/database.sqlite")
     raise TypeError if path.class != String
     @db = SQLite3::Database.new path
     @db.foreign_keys = true
@@ -159,17 +159,16 @@ class DataBase
   end
 
   # Delete a user
-  # @param caller_id [Integer] user id making call
   # @param user_id [Integer] user id to delete
+  # @param caller_id [Integer] user id making call
   # @return [nil,String] returns error string on failure
-  public def delete_user(caller_id, user_id)
-
-    return $error['BADPERM'] unless caller_id == user_id || caller_user["UserPrivilege"] > 0
+  public def delete_user(user_id, caller_id)
 
     user = get_user(user_id)
     return $error['NOUSER'] if user == nil
 
     caller_user = get_user(caller_id)
+    return $error['BADPERM'] unless caller_id == user_id || caller_user["UserPrivilege"] > 0
 
     image_id = user["ImageId"]
 
@@ -217,7 +216,7 @@ class DataBase
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       board["UserId"] == user["UserId"]
 
-    @db.execute("DELETE FROM Board WHERE BoardId=?", board)
+    @db.execute("DELETE FROM Board WHERE BoardId=?", board_id)
   end
 
   # Create a new thread
@@ -262,7 +261,7 @@ class DataBase
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
 
-    board = get_thread(board_id)
+    board = get_thread(thread_id)
     return $error['NOTHREAD'] if board == nil
 
     time = Time.now.to_i
@@ -272,7 +271,7 @@ class DataBase
 
 
     # Get PostId of new post
-    post_id = @db.execute("SELECT PostId FROM Post WHERE PostContent=? AND PostCreationDate=? AND"\
+    post_id = @db.execute("SELECT PostId FROM Post WHERE PostContent=? AND PostCreationDate=? AND "\
                           "UserId=? AND ThreadId=?", content, time, caller_id, thread_id).first['PostId']
 
     # Add watching users to unread list
@@ -327,27 +326,43 @@ class DataBase
     return $error['NOUSER'] if get_user(caller_id) == nil
 
     # Don't add users already watching again
-    if @db.execute("SELECT * FROM UserWatchingPost WHERE ThreadId=? AND UserId=?",
+    if @db.execute("SELECT * FROM UserWatchingThread WHERE ThreadId=? AND UserId=?",
         thread_id, caller_id).empty?
-      @db.execute("INSERT INTO UserWatchingPost(ThreadId,UserId) VALUES(?,?)", thread_id, caller_id)
+      @db.execute("INSERT INTO UserWatchingThread(ThreadId,UserId) VALUES(?,?)", thread_id, caller_id)
     end
   end
 
   # Stop watching a thread
   # @param thread_id [Integer] thread to watch
   # @param caller_id [Integer] issuer of call
-  # @return [nil]
+  # @return [String,nil] returns error string on failure
   public def stop_watching(thread_id, caller_id)
-    @db.execute("DELETE FROM UserWatchingPost WHERE ThreadId=? AND UserId=?",
+    return $error['NOTHREAD'] if get_thread(thread_id) == nil
+    return $error['NOUSER'] if get_user(caller_id) == nil
+    @db.execute("DELETE FROM UserWatchingThread WHERE ThreadId=? AND UserId=?",
                 thread_id, caller_id)
   end
 
   # Get a list of unread posts
   # @param caller_id [Integer] issuer of call
-  # @return [nil]
+  # @return [String,nil] returns error string on failure
   public def get_unread(caller_id)
+    return $error['NOUSER'] if get_user(caller_id) == nil
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
                 "WHERE UserUnreadPost.UserId=?", caller_id)
+  end
+
+  # Mark a thread as unread
+  # @param thread_id [Integer] thread to mark as read
+  # @param caller_id [Integer] issuer of call
+  # @return [String,nil] returns error string on failure
+  public def mark_thread_read(thread_id, caller_id)
+    return $error['NOTHREAD'] if get_thread(thread_id) == nil
+    return $error['NOUSER'] if get_user(caller_id) == nil
+    # My SQLite magnum opus!
+    @db.execute("DELETE FROM UserUnreadPost WHERE PostId IN "\
+                "(SELECT UserUnreadPost.PostId FROM UserUnreadPost INNER JOIN Post "\
+                "ON UserUnreadPost.PostId=Post.PostId WHERE Post.ThreadId=?)", thread_id)
   end
 
   ########################
@@ -398,7 +413,7 @@ class DataBase
   # @return [Hash,nil] returns thread hash if found or nil if not found
   private def get_thread(thread_id)
     thread = @db.execute("SELECT * FROM Thread WHERE ThreadId=?", thread_id)
-    return nil if thread.empty
+    return nil if thread.empty?
     return thread.first
   end
 
@@ -406,7 +421,7 @@ class DataBase
   # @param post_id [Integer] the post id to be retrieved
   # @return [Hash,nil] returns post hash if found or nil if not found
   private def get_post(post_id)
-    post = @db.execute("SELECT * FROM Thread WHERE ThreadId=?", post_id)
+    post = @db.execute("SELECT * FROM Post WHERE PostId=?", post_id)
     return nil if post.empty?
     return post.first
   end
