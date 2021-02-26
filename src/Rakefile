@@ -10,7 +10,6 @@ task :setup do
   sh "bundle install"
 end
 
-directory "doc"
-file "doc" => sources do
-  sh "yardoc #{sources.join(" ")}"
+file doc: sources do |t|
+  sh "yardoc #{t.prerequisites.join(" ")}"
 end

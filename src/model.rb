@@ -3,6 +3,8 @@ require 'bcrypt'
 
 require_relative 'view.rb'
 
+# Exit program printing an error message
+# @param msg [String] message to print before exit
 def die(msg)
   STDERR.puts(msg)
   exit 1
