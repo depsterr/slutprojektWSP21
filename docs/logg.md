@@ -33,3 +33,14 @@ Jag har nu listat ut vad som var felet med ON DELETE CASCADE. Det visade sig att
 db.set_int_pragma("foreign_keys", 1)
 ```
 Som tur är använder jag en separat klass för alla mina databas operationer, så detta är inte särskilt jobbigt då jag bara behöver lägga till denna rad på ett ställe.
+
+Efter detta hittade jag nu en dedikerad metod för just foreign key, vilket betyder att jag endast behöver lägga till följande i min kod:
+```rb
+@db.foreign_keys = true
+```
+
+Dock är jag fortfarande lite paranoid, så jag kollar alltid att den är på, och annars krashar jag med ett error meddelande.
+```rb
+die "Unable to set foreign keys pragma" unless @db.foreign_keys == true
+```
+

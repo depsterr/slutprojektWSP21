@@ -41,8 +41,8 @@ class DataBase
   public def initialize(path)
     raise TypeError if path.class != String
     @db = SQLite3::Database.new path
-    @db.set_int_pragma("foreign_keys", 1)
-    die "Unable to set foreign keys pragma" unless @db.get_int_pragma("foreign_keys") == 1
+    @db.foreign_keys = true
+    die "Unable to set foreign keys pragma" unless @db.foreign_keys == true
     @db.results_as_hash = true
   end
 
