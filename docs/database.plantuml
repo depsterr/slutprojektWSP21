@@ -63,7 +63,7 @@ entity "Post" as post {
 post --> user
 post --> thread
 
-entity "UserWatchingPost" as userwatchingthread {
+entity "UserWatchingThread" as userwatchingthread {
 	UserId: number
 	ThreadId: number
 }
