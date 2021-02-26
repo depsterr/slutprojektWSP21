@@ -3,6 +3,11 @@ require 'bcrypt'
 
 require_relative 'view.rb'
 
+def die(msg)
+  STDERR.puts(msg)
+  exit 1
+end
+
 # NOTE:
 # Use join to sort boards by latest posted post in thread.
 # Could use a report system which adds posts to unread for
@@ -36,6 +41,8 @@ class DataBase
   public def initialize(path)
     raise TypeError if path.class != String
     @db = SQLite3::Database.new path
+    @db.set_int_pragma("foreign_keys", 1)
+    die "Unable to set foreign keys pragma" unless @db.get_int_pragma("foreign_keys") == 1
     @db.results_as_hash = true
   end
 
