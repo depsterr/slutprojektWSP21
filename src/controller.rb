@@ -18,11 +18,6 @@ helpers do
   end
 end
 
-# Initialize our database
-Dir.mkdir "db" unless Dir.exists? "db"
-db = DataBase.new "db/database.sqlite"
-db.init
-
 get '/' do
   slim :index
 end

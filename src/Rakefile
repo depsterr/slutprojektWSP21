@@ -1,4 +1,6 @@
 sources = Dir["**/*.rb"]
+db_dir = "db"
+db_file = "#{db_dir}/database.sqlite"
 
 task default: :run
 
@@ -6,8 +8,20 @@ task :run do
   ruby "controller.rb"
 end
 
-task :setup do
+task setup: db_file do
   sh "bundle install"
+end
+
+task database: db_file
+directory db_dir
+file db_file => db_dir do |t|
+  require_relative 'model.rb'
+  DataBase.new(t.name).init
+end
+
+task :reset do
+  File.delete(db_file) if File.exists?(db_file)
+  Rake::Task[db_file].invoke
 end
 
 file doc: sources do |t|

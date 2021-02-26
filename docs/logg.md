@@ -44,3 +44,4 @@ Dock är jag fortfarande lite paranoid, så jag kollar alltid att den är på, o
 die "Unable to set foreign keys pragma" unless @db.foreign_keys == true
 ```
 
+Jag har även lagt till en `Rakefile`, som låter en använda kommandot `rake` för att automatisera processer. Denna är dokumenterad i [`../src/README.md`](../src/README.md).
