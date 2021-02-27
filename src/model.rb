@@ -1,5 +1,6 @@
 require 'sqlite3'
 require 'bcrypt'
+require 'sanitize'
 
 require_relative 'view.rb'
 
@@ -32,10 +33,10 @@ end
 #  - [x] [Un]watch Thread
 #  - [x] Get unread
 #  - [x] Mark unread read
-#  - [ ] Edit user settings
-#  - [ ] Return nil to be consistent (do what docs say)
-#  - [ ] Break permissions into seperate helper functions (perhaps prefixed with may_?)
-#  - [ ] Sanitize strings (see https://github.com/rgrove/sanitize)
+#  - [x] Edit user settings
+#  - [x] Return nil to be consistent (do what docs say)
+#  - [x] Strip strings
+#  - [x] Sanitize strings (see https://github.com/rgrove/sanitize)
 class DataBase
   # Create a new DataBase connection
   # @param path [String] the path to the database file
@@ -112,6 +113,9 @@ class DataBase
   #   returns error string.
   public def log_in(user, pass, identifier)
 
+    user.strip!
+    pass.strip!
+
     return $error['TIMEOUT'] unless Validator.timeout? identifier
 
     result = @db.execute("SELECT * FROM User WHERE UserName=?", user)
@@ -137,6 +141,10 @@ class DataBase
   # @return [Integer,String] on sucess returns user id, otherwise
   #   returns error string.
   public def register(user, pass, repeat_pass, identifier)
+
+    user.strip!
+    pass.strip!
+    repeat_pass.strip!
     
     return $error['TIMEOUT'] unless Validator.timeout? identifier
     return $error['NOMATCH'] unless pass == repeat_pass
@@ -156,6 +164,42 @@ class DataBase
 
     return id
 
+  end
+
+  # Update user settings. Any argument set to nil or an
+  # empty string will not be updated.
+  # @param caller_id [Integer] issuer of call
+  # @param user_name [String] new name
+  # @param user_footer [String] new footer
+  # @return [nil,String] returns error string on failure
+  public def update_user(caller_id, user_name, user_footer)
+
+    user_name.strip!
+    user_footer.strip!
+
+    return $error['BADUSER'] unless Validator.username? user_name
+
+    user = get_user(caller_id)
+    return $error['NOUSER'] if user == nil
+
+    updates = []
+    unless user_name.nil? || user_name.empty?
+      return $error['USERTAKEN'] unless @db.execute("SELECT * FROM User WHERE UserName=?",
+                                                    user_name).empty?
+      updates << { key: "UserName", value: user_name }
+    end
+    unless user_footer.nil? || user_footer.empty?
+      user_footer = Validator.sanitize_content(user_footer)
+      return $error['BADCONTENT'] if user_footer.empty?
+
+      updates << { key: "UserFooter", value: user_footer }
+    end
+
+    updates.each do |u|
+      @db.execute("UPDATE User SET #{u[:key]}=? WHERE UserId=?", u[:value], caller_id)
+    end
+
+    nil
   end
 
   # Delete a user
@@ -183,6 +227,7 @@ class DataBase
       @db.execute("DELETE FROM Image WHERE ImageId=?", image_id)
     end
 
+    nil
   end
 
   # Create a new board
@@ -190,6 +235,12 @@ class DataBase
   # @param caller_id [Integer] user id making call
   # @return [nil,String] returns error string on failure
   public def create_board(board, caller_id)
+
+    board.strip!
+    board = Validator.sanitize_name(board)
+
+    return $error['BADNAME'] if board.empty?
+
     user = get_user(caller_id)
 
     return $errror['NOUSER'] if user == nil
@@ -200,6 +251,8 @@ class DataBase
 
     @db.execute("INSERT INTO Board(BoardName,BoardCreationDate,UserId) VALUES(?,?,?)",
                 board, Time.now.to_i, caller_id)
+
+    nil
   end
 
   # Delete a board
@@ -217,14 +270,22 @@ class DataBase
       board["UserId"] == user["UserId"]
 
     @db.execute("DELETE FROM Board WHERE BoardId=?", board_id)
+
+    nil
   end
 
   # Create a new thread
   # @param thread [String] name of thread
-  # @param board_id [String] board if to post to
+  # @param board_id [Integer] board to post to
   # @param caller_id [Integer] creator of thread
   # @return [nil,String] returns error string on failure
   public def create_thread(thread, board_id, caller_id)
+
+    thread.strip!
+    thread = Validator.sanitize_name(strip)
+
+    return $error['BADNAME'] if thread.empty?
+
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
 
@@ -233,6 +294,8 @@ class DataBase
 
     @db.execute("INSERT INTO Thread(ThreadName,ThreadCreationDate,ThreadStickied,"\
       "BoardId,UserId) VALUES(?,?,?,?,?)", thread, Time.now.to_i, 0, board_id, caller_id)
+
+    nil
   end
 
   # Delete a thread
@@ -250,6 +313,8 @@ class DataBase
       thread["UserId"] == user["UserId"]
 
     @db.execute("DELETE FROM Thread WHERE ThreadId=?", thread_id)
+
+    nil
   end
 
   # Create a new post
@@ -258,6 +323,12 @@ class DataBase
   # @param caller_id [Integer] creator of post
   # @return [nil,String] returns error string on failure
   public def create_post(content, thread_id, caller_id)
+
+    content = content.strip!
+    content = Validator.sanitize_content(content)
+
+    return $error['BADCONTENT'] if content.empty?
+
     user = get_user(caller_id)
     return $error['NOUSER'] if user == nil
 
@@ -278,6 +349,8 @@ class DataBase
     @db.execute("SELECT UserId FROM UserWatchingThread WHERE ThreadId=?", thread_id).each do |watcher|
       @db.execute("INSERT INTO UserUnreadPost(UserId, PostId) VALUES(?,?)", watcher['UserId'], post_id)
     end
+
+    nil
   end
 
   # Delete a post
@@ -295,6 +368,8 @@ class DataBase
       post["UserId"] == user["UserId"]
 
     @db.execute("DELETE FROM Post WHERE PostId=?", post_id)
+
+    nil
   end
 
   # Sticky or unsticky a thread to a board
@@ -315,6 +390,8 @@ class DataBase
 
     @db.execute("UPDATE Thread SET ThreadStickied=? WHERE ThreadId=?", sticky ? 1 : 0,
                 thread_id)
+
+    nil
   end
 
   # Start watching a thread
@@ -330,6 +407,8 @@ class DataBase
         thread_id, caller_id).empty?
       @db.execute("INSERT INTO UserWatchingThread(ThreadId,UserId) VALUES(?,?)", thread_id, caller_id)
     end
+
+    nil
   end
 
   # Stop watching a thread
@@ -341,6 +420,8 @@ class DataBase
     return $error['NOUSER'] if get_user(caller_id) == nil
     @db.execute("DELETE FROM UserWatchingThread WHERE ThreadId=? AND UserId=?",
                 thread_id, caller_id)
+
+    nil
   end
 
   # Get a list of unread posts
@@ -350,6 +431,8 @@ class DataBase
     return $error['NOUSER'] if get_user(caller_id) == nil
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
                 "WHERE UserUnreadPost.UserId=?", caller_id)
+
+    nil
   end
 
   # Mark a thread as unread
@@ -363,6 +446,8 @@ class DataBase
     @db.execute("DELETE FROM UserUnreadPost WHERE PostId IN "\
                 "(SELECT UserUnreadPost.PostId FROM UserUnreadPost INNER JOIN Post "\
                 "ON UserUnreadPost.PostId=Post.PostId WHERE Post.ThreadId=?)", thread_id)
+
+    nil
   end
 
   ########################
@@ -429,11 +514,34 @@ end
 
 # Handles validations
 class Validator
+  # Sanitize a string
+  # @param string [String] string to sanitize
+  # @param type [Symbol] must either be :name or :content
+  # @return [String] sanitized string
+  def self.sanitize(string, type)
+    Sanitize.fragment(string, $sanitize_opts[type])
+  end
+
+  # Sanitize a name
+  # @param name [String] string to sanitize
+  # @return [String] sanitized string
+  def self.sanitize_name(name)
+    sanitize(name, :name)
+  end
+
+  # Sanitize a content
+  # @param content [String] string to sanitize
+  # @return [String] sanitized string
+  def self.sanitize_content(content)
+    sanitize(content, :content)
+  end
+
   # Check if a string is a valid email address
   # @param string [String] string to check
   # @return [TrueClass,FalseClass] boolean success value
   def self.mail?(string)
     # WORD @ WORD . WORD
+    return false unless sanitize_name(string) == string
     not string.scan(/^\w+@\w+\.\w+$/).empty?
   end
 
@@ -441,14 +549,14 @@ class Validator
   # @param string [String] string to check
   # @return [TrueClass,FalseClass] boolean success value
   def self.password?(string)
-    # TODO password formatting
-    true
+    string.length > 8
   end
 
   # Check if a string is a valid username
   # @param string [String] string to check
   # @return [TrueClass,FalseClass] boolean success value
   def self.username?(string)
+    return false unless sanitize_name(string) == string
     # Username cannot begin with digits and must be 5-32 digits
     not string.scan(/^\D\w{4,31}$/).empty?
   end
