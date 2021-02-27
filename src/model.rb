@@ -448,7 +448,8 @@ class DataBase
     # My SQLite magnum opus!
     @db.execute("DELETE FROM UserUnreadPost WHERE PostId IN "\
                 "(SELECT UserUnreadPost.PostId FROM UserUnreadPost INNER JOIN Post "\
-                "ON UserUnreadPost.PostId=Post.PostId WHERE Post.ThreadId=?)", thread_id)
+                "ON UserUnreadPost.PostId=Post.PostId WHERE Post.ThreadId=?) AND UserId=?",
+                thread_id, caller_id)
 
     nil
   end
