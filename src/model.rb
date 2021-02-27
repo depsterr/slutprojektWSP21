@@ -37,6 +37,10 @@ end
 #  - [x] Return nil to be consistent (do what docs say)
 #  - [x] Strip strings
 #  - [x] Sanitize strings (see https://github.com/rgrove/sanitize)
+#  - [ ] Image handling
+#  - [ ] Get boards method
+#  - [ ] Get threads method
+#  - [ ] Get posts method
 class DataBase
   # Create a new DataBase connection
   # @param path [String] the path to the database file
@@ -102,6 +106,8 @@ class DataBase
       "PostId INTEGER NOT NULL,"\
       "FOREIGN KEY(UserId) REFERENCES User(UserId) ON DELETE CASCADE,"\
       "FOREIGN KEY(PostId) REFERENCES Post(PostId) ON DELETE CASCADE")
+
+    nil
   end
 
   # Authenticate a user login
@@ -131,9 +137,6 @@ class DataBase
   end
 
   # Register a new user
-  # TODO
-  # - more verbose/informative messages to help with
-  #   formatting
   # @param user [String] the username
   # @param pass [String] the password
   # @param identifier [String] identifier used to stop spam
@@ -450,6 +453,8 @@ class DataBase
     nil
   end
 
+  # Get a list of boards as well as their 
+
   ########################
   ### DEBUG DEFS BELOW ###
   ########################
@@ -461,6 +466,7 @@ class DataBase
   # @return [nil]
   public def set_priv(user_id, level)
     @db.execute("UPDATE User SET UserPrivilege=? WHERE UserId=?", level, user_id)
+    nil
   end
 
   ##########################
