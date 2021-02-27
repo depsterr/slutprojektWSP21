@@ -45,3 +45,7 @@ die "Unable to set foreign keys pragma" unless @db.foreign_keys == true
 ```
 
 Jag har även lagt till en `Rakefile`, som låter en använda kommandot `rake` för att automatisera processer. Denna är dokumenterad i [`../src/README.md`](../src/README.md).
+
+# Lördag 27e februari
+
+Idag så har jag implementerat en `update_user()` metod som uppdaterar en användares information till min DataBase klass. Jag har även sett till att alla mina funktioner returnerar nil när de lyckas. Jag har också börjat med lite "anti hacking" genom att sanitiza mina input strings för html taggar för att förhindra möjliga XSS (cross-site scripting) attacker.
