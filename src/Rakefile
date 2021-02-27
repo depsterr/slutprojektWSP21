@@ -8,7 +8,7 @@ task :run do
   ruby "controller.rb"
 end
 
-task setup: do
+task :setup do
   sh "bundle install"
   Rake::Task[db_file].invoke
 end
