@@ -1,6 +1,7 @@
 sources = Dir["**/*.rb"]
 db_dir = "db"
 db_file = "#{db_dir}/database.sqlite"
+img_dir = "public/img"
 
 task default: :run
 
@@ -8,7 +9,8 @@ task :run do
   ruby "controller.rb"
 end
 
-task :setup do
+directory img_dir
+task setup: img_dir do
   sh "bundle install"
   Rake::Task[db_file].invoke
 end

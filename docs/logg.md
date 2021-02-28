@@ -49,3 +49,11 @@ Jag har även lagt till en `Rakefile`, som låter en använda kommandot `rake` f
 # Lördag 27e februari
 
 Idag så har jag implementerat en `update_user()` metod som uppdaterar en användares information till min DataBase klass. Jag har även sett till att alla mina funktioner returnerar nil när de lyckas. Jag har också börjat med lite "anti hacking" genom att sanitiza mina input strings för html taggar för att förhindra möjliga XSS (cross-site scripting) attacker.
+
+# Söndag 28e februari
+
+Idag har jag implementerat databas metoder för att få listor av boards, threads och posts, alltså allt som behövs för att kunna skriva en frontend.
+
+Jag har även skrivit om min `update_user()` metod så att jag nu kan hantera bilder.
+
+Jag är nu redo att skriva ett front end.

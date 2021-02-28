@@ -1,6 +1,7 @@
-require 'sqlite3'
+require 'digest'
 require 'bcrypt'
 require 'sanitize'
+require 'sqlite3'
 
 require_relative 'view.rb'
 
@@ -11,8 +12,14 @@ def die(msg)
   exit 1
 end
 
-# NOTE:
-# Use join to sort boards by latest posted post in thread.
+# Translate a local image filepath into it's absolute filepath
+# on the web
+# @param path [String] local filepath
+# @return [String] web filepath
+def local_to_web_path(path)
+  "/img/#{File.basename(path)}"
+end
+
 # Could use a report system which adds posts to unread for
 # all users with a privilege level over 0.
 
@@ -37,10 +44,12 @@ end
 #  - [x] Return nil to be consistent (do what docs say)
 #  - [x] Strip strings
 #  - [x] Sanitize strings (see https://github.com/rgrove/sanitize)
-#  - [ ] Image handling
-#  - [ ] Get boards method
-#  - [ ] Get threads method
-#  - [ ] Get posts method
+#  - [x] Get boards method
+#  - [x] Get threads method
+#  - [x] Get posts method
+#  - [x] Image handling
+# DO IF YOU HAVE THE TIME:
+#  - [ ] Let user edit most fields
 class DataBase
   # Create a new DataBase connection
   # @param path [String] the path to the database file
@@ -172,34 +181,64 @@ class DataBase
   # Update user settings. Any argument set to nil or an
   # empty string will not be updated.
   # @param caller_id [Integer] issuer of call
-  # @param user_name [String] new name
-  # @param user_footer [String] new footer
+  # @param options [Hash] contains all information to update.
+  # @option options [String] :name new username
+  # @option options [String] :footer new footer
+  # @option options [String] :image_path path to new image
   # @return [nil,String] returns error string on failure
-  public def update_user(caller_id, user_name, user_footer)
-
-    user_name.strip!
-    user_footer.strip!
-
-    return $error['BADUSER'] unless Validator.username? user_name
+  public def update_user(caller_id, options)
 
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
-    updates = []
-    unless user_name.nil? || user_name.empty?
-      return $error['USERTAKEN'] unless @db.execute("SELECT * FROM User WHERE UserName=?",
-                                                    user_name).empty?
-      updates << { key: "UserName", value: user_name }
-    end
-    unless user_footer.nil? || user_footer.empty?
-      user_footer = Validator.sanitize_content(user_footer)
-      return $error['BADCONTENT'] if user_footer.empty?
-
-      updates << { key: "UserFooter", value: user_footer }
+    unless options[:name].nil?
+      name = options[:name].strip
+      return $error['BADUSER'] unless Validator.username? name
+      @db.execute("UPDATE User SET UserName=? WHERE UserId=?", name, caller_id)
     end
 
-    updates.each do |u|
-      @db.execute("UPDATE User SET #{u[:key]}=? WHERE UserId=?", u[:value], caller_id)
+    unless options[:footer].nil?
+      footer = Validator.sanitize_content(options[:footer].strip)
+      return $error['BADCONTENT'] if footer.empty?
+      @db.execute("UPDATE User SET UserFooter=? WHERE UserId=?", footer, caller_id)
+    end
+
+    unless options[:image_path].nil?
+      new_image = options[:image_path]
+      old_image = @db.execute("SELECT ImageId,ImageFilepath,ImageMD5 FROM User INNER JOIN Image WHERE "\
+                              "User.ImageId = Image.ImageId AND UserId=?", caller_id).first
+
+      # Check if identical image exists
+      new_image_file = File.open(new_image)
+      md5_hash = Digest::MD5.hexdigest(new_image_file.read()) 
+
+      # Images with same digest
+      matches = @db.execute("SELECT * FROM Image WHERE ImageMD5=?", md5_hash)
+
+      if matches.empty?
+        # Image is new
+        # Move image into public folder and add it to database
+        new_image_file.rename("./public/img/#{new_image_file.basename}")
+        @db.execute("INSERT INTO Image(ImageMD5, ImageFilepath) VALUES(?,?)", md5_hash,
+                    "./public/img/#{new_image_file.basename}")
+
+        # Update user image
+        image_id = @db.execute("SELECT ImageId FROM Image WHERE ImageMD5=?", md5_hash).first['ImageId']
+        @db.execute("UPDATE User SET ImageId=? WHERE UserId=?", image_id, caller_id)
+
+        # Delete old profile picture if unused
+        delete_image_if_unused(old_image['ImageId'])
+      else
+        # Image already exists
+        # Get matching image
+        image_id = matches.first['ImageId']
+        # Update user image
+        @db.execute("UPDATE User SET ImageId=? WHERE UserId=?", image_id, caller_id)
+        # Delete old image if no longer used
+        delete_image_if_unused(old_image['ImageId'])
+        # Delete uploaded image since an identical image was present
+        new_image_file.delete
+      end
     end
 
     nil
@@ -212,7 +251,7 @@ class DataBase
   public def delete_user(user_id, caller_id)
 
     user = get_user(user_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     caller_user = get_user(caller_id)
     return $error['BADPERM'] unless caller_id == user_id || caller_user["UserPrivilege"] > 0
@@ -221,14 +260,7 @@ class DataBase
 
     @db.execute("DELETE FROM User WHERE UserId=?", user_id)
 
-    # If no one else uses this image, then remove it
-    if image_id != nil && @db.execute("SELECT * FROM User WHERE ImageId=?", image_id).empty?
-      # Remove image from disk too
-      image_path = @db.execute("SELECT ImageFilepath FROM Image WHERE ImageId=?",
-                               image_id).first["ImageFilepath"]
-      File.delete(image_path) if File.exists? image_path
-      @db.execute("DELETE FROM Image WHERE ImageId=?", image_id)
-    end
+    delete_image_if_unused(image_id)
 
     nil
   end
@@ -246,7 +278,7 @@ class DataBase
 
     user = get_user(caller_id)
 
-    return $errror['NOUSER'] if user == nil
+    return $errror['NOUSER'] if user.nil?
     return $error['BADPERM'] unless user["UserPrivilege"] > 0
 
     return $error['BOARDTAKEN'] unless @db.execute("SELECT BoardId FROM Board WHERE BoardName=?",
@@ -264,10 +296,10 @@ class DataBase
   # @return [nil,String] returns error string on failure
   public def delete_board(board_id, caller_id)
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     board = get_board(board_id)
-    return $error['NOBOARD'] if board == nil
+    return $error['NOBOARD'] if board.nil?
 
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       board["UserId"] == user["UserId"]
@@ -285,15 +317,15 @@ class DataBase
   public def create_thread(thread, board_id, caller_id)
 
     thread.strip!
-    thread = Validator.sanitize_name(strip)
+    thread = Validator.sanitize_name(thread)
 
     return $error['BADNAME'] if thread.empty?
 
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     board = get_board(board_id)
-    return $error['NOBOARD'] if board == nil
+    return $error['NOBOARD'] if board.nil?
 
     @db.execute("INSERT INTO Thread(ThreadName,ThreadCreationDate,ThreadStickied,"\
       "BoardId,UserId) VALUES(?,?,?,?,?)", thread, Time.now.to_i, 0, board_id, caller_id)
@@ -307,10 +339,10 @@ class DataBase
   # @return [nil,String] returns error string on failure
   public def delete_thread(thread_id, caller_id)
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     thread = get_thread(thread_id)
-    return $error['NOTHREAD'] if board == nil
+    return $error['NOTHREAD'] if board.nil?
 
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       thread["UserId"] == user["UserId"]
@@ -333,10 +365,10 @@ class DataBase
     return $error['BADCONTENT'] if content.empty?
 
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     board = get_thread(thread_id)
-    return $error['NOTHREAD'] if board == nil
+    return $error['NOTHREAD'] if board.nil?
 
     time = Time.now.to_i
 
@@ -362,10 +394,10 @@ class DataBase
   # @return [nil,String] returns error string on failure
   public def delete_post(post_id, caller_id)
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     post = get_post(post_id)
-    return $error['NOPOST'] if post == nil
+    return $error['NOPOST'] if post.nil?
 
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       post["UserId"] == user["UserId"]
@@ -377,12 +409,12 @@ class DataBase
 
   # Sticky or unsticky a thread to a board
   # @param thread_id [Integer] thread to sticky
-  # @param caller_id [Integer] issuer of call
   # @param sticky    [Bool] if true, thread is sticked, if false thread is unstickied
+  # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
-  public def update_sticky_thread(thread_id, caller_id, sticky)
+  public def update_sticky_thread(thread_id, sticky, caller_id)
     user = get_user(caller_id)
-    return $error['NOUSER'] if user == nil
+    return $error['NOUSER'] if user.nil?
 
     thread = @db.execute("SELECT Board.UserId,Thread.ThreadId FROM Thread INNER JOIN Board "\
                          "ON Thread.BoardId = Board.BoardId WHERE ThreadId=?", thread_id)
@@ -402,8 +434,8 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def start_watching(thread_id, caller_id)
-    return $error['NOTHREAD'] if get_thread(thread_id) == nil
-    return $error['NOUSER'] if get_user(caller_id) == nil
+    return $error['NOTHREAD'] if get_thread(thread_id).nil?
+    return $error['NOUSER'] if get_user(caller_id).nil?
 
     # Don't add users already watching again
     if @db.execute("SELECT * FROM UserWatchingThread WHERE ThreadId=? AND UserId=?",
@@ -419,8 +451,8 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def stop_watching(thread_id, caller_id)
-    return $error['NOTHREAD'] if get_thread(thread_id) == nil
-    return $error['NOUSER'] if get_user(caller_id) == nil
+    return $error['NOTHREAD'] if get_thread(thread_id).nil?
+    return $error['NOUSER'] if get_user(caller_id).nil?
     @db.execute("DELETE FROM UserWatchingThread WHERE ThreadId=? AND UserId=?",
                 thread_id, caller_id)
 
@@ -431,7 +463,7 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def get_unread(caller_id)
-    return $error['NOUSER'] if get_user(caller_id) == nil
+    return $error['NOUSER'] if get_user(caller_id).nil?
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
                 "WHERE UserUnreadPost.UserId=?", caller_id)
 
@@ -443,8 +475,8 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def mark_thread_read(thread_id, caller_id)
-    return $error['NOTHREAD'] if get_thread(thread_id) == nil
-    return $error['NOUSER'] if get_user(caller_id) == nil
+    return $error['NOTHREAD'] if get_thread(thread_id).nil?
+    return $error['NOUSER'] if get_user(caller_id).nil?
     # My SQLite magnum opus!
     @db.execute("DELETE FROM UserUnreadPost WHERE PostId IN "\
                 "(SELECT UserUnreadPost.PostId FROM UserUnreadPost INNER JOIN Post "\
@@ -454,7 +486,35 @@ class DataBase
     nil
   end
 
-  # Get a list of boards as well as their 
+  # Get a list of boards as well as their creator
+  # @return [Hash Array] Hash array with all user and board database fields
+  public def get_boards
+    @db.execute("SELECT * FROM Board INNER JOIN User ON Board.UserId=User.UserId "\
+                "ORDER BY BoardCreationDate DESC")
+  end
+
+  # Get a list of threads as well as their creator from a board
+  # @param board_id [Integer] board to get threads from
+  # @return [Hash] Hash array with all user and thread database fields
+  public def get_threads(board_id)
+    return $error['NOBOARD'] if get_board(board_id).nil?
+    @db.execute("SELECT * FROM Thread INNER JOIN User ON Thread.UserId=User.UserId "\
+                "WHERE BoardId=? ORDER BY ThreadStickied DESC, ThreadCreationDate ASC", board_id)
+  end
+
+  # Get a list of posts as well as their creators from a thread
+  # @param thread_id [Integer] thread to get posts from
+  # @return [Hash] Hash with :thread thread hash and :posts 
+  #                array with all user and post database fields.
+  public def get_posts(thread_id)
+    thread = get_thread(thread_id)
+    return $error['NOTHREAD'] if thread.nil?
+
+    posts = @db.execute("SELECT * FROM Post INNER JOIN User ON Post.UserId=User.UserId "\
+                "WHERE ThreadId=? ORDER BY PostCreationDate ASC", thread_id)
+
+    return { thread: thread, posts: posts }
+  end
 
   ########################
   ### DEBUG DEFS BELOW ###
@@ -473,6 +533,18 @@ class DataBase
   ##########################
   ### PRIVATE DEFS BELOW ###
   ##########################
+
+  # Delete an image if no user uses it
+  # @param image_id [Integer] image to remove
+  private def delete_image_if_unused(image_id)
+    if image_id != nil && @db.execute("SELECT * FROM User WHERE ImageId=?", image_id).empty?
+      # Remove image from disk too
+      image_path = @db.execute("SELECT ImageFilepath FROM Image WHERE ImageId=?",
+                               image_id).first["ImageFilepath"]
+      File.delete(image_path) if File.exists? image_path
+      @db.execute("DELETE FROM Image WHERE ImageId=?", image_id)
+    end
+  end
 
   # Make sure a table exists
   # @param name [String] the name of the table
@@ -573,13 +645,13 @@ class Validator
   # @param identifier [String] IP address of login attempt
   # @return [TrueClass,FalseClass] true if login is allowed
   def self.timeout? identifier
-    @@attempt_hash[identifier] = [] if @@attempt_hash[identifier] == nil
+    @@attempt_hash[identifier] = [] if @@attempt_hash[identifier].nil?
     time = Time.now
 
 
     # Clear all outdated entries
     @@attempt_hash.each do |key|
-      next if @@attempt_hash[key] == nil
+      next if @@attempt_hash[key].nil?
       @@attempt_hash[key].select! do |timestamp|
         time - timestamp < 10
       end
