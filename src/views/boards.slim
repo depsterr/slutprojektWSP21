@@ -1,8 +1,16 @@
 - unless boards.nil? || boards.empty?
   table
+    tr
+      td 
+        h2 Boards
     - boards.each do |board|
       tr
-        td = board['UserName']
+        - if board['UserPrivilege'] > 0
+          td.admin 
+            span.material-icons title="Administrator" shield
+            = board['UserName']
+        - else
+          td = board['UserName']
         td
           a href = "/board/#{board['BoardId']}" = board['BoardName']
         td = Time.at(board['BoardCreationDate']) 

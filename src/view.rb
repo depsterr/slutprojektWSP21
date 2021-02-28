@@ -17,6 +17,7 @@ $error = {
   'THREADTAKEN' => "A thread with this name already exists",
   'TIMEOUT'     => "You're doing this too much. Please try again later",
   'BADPERM'     => "You're not allowed to do that",
+  'BADREQ'      => "Invalid request",
 }
 # Sanitizing options for different types of data
 $sanitize_opts = {

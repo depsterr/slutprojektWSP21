@@ -24,6 +24,25 @@ helpers do
   def local_to_web_path(path)
     "/img/#{File.basename(path)}"
   end
+
+  # Redirect to error with error string
+  def error_str(str)
+    session[:error] = str
+    redirect to('/error')
+  end
+
+  # Redirect to error with error code 
+  def error_with(errorcode)
+    error_str($error[errorcode])
+  end
+
+  # Handle return value
+  def handle_error(val)
+    if val.class == String
+      error_str(val)
+    end
+  end
+
 end
 
 # Exit program printing an error message
@@ -139,7 +158,7 @@ class DataBase
   #   attempts, (probably the IP address)
   # @return [Integer,String] on sucess returns user id, otherwise
   #   returns error string.
-  public def log_in(user, pass, identifier)
+  public def login(user, pass, identifier)
 
     user.strip!
     pass.strip!
@@ -174,7 +193,7 @@ class DataBase
     return $error['TIMEOUT'] unless Validator.timeout? identifier
     return $error['NOMATCH'] unless pass == repeat_pass
     return $error['BADUSER'] unless Validator.username? user
-    return $error['BASPASS'] unless Validator.password? pass
+    return $error['BADPASS'] unless Validator.password? pass
 
     result = @db.execute("SELECT * FROM User WHERE UserName=?", user)
     return $error['USERTAKEN'] unless result.empty?
@@ -524,17 +543,28 @@ class DataBase
 
   # Get a list of posts as well as their creators from a thread
   # @param thread_id [Integer] thread to get posts from
-  # @return [Hash,String] Hash with :thread thread hash and :posts 
-  #                       array with all user and post database fields.
-  #                       returns string on error.
+  # @return [Hash,String] Hash with :thread thread hash :board board hash
+  #                       and :posts hash array with all user and post
+  #                       database fields. returns string on error.
   public def get_posts(thread_id)
     thread = get_thread(thread_id)
     return $error['NOTHREAD'] if thread.nil?
 
+    board = get_board(thread['BoardId'])
+
     posts = @db.execute("SELECT * FROM Post INNER JOIN User ON Post.UserId=User.UserId "\
                 "WHERE ThreadId=? ORDER BY PostCreationDate ASC", thread_id)
 
-    return { thread: thread, posts: posts }
+    return { thread: thread, board: board, posts: posts }
+  end
+
+  # Return the user of the given user_id from the database
+  # @param user_id [Integer] the user_id of the user to be retrieved
+  # @return [Hash,nil] returns user hash if found or nil if not found
+  public def get_user(user_id)
+    user = @db.execute("SELECT * FROM User WHERE UserId=?", user_id)
+    return nil if user.empty?
+    return user.first
   end
 
   ########################
@@ -573,15 +603,6 @@ class DataBase
   # @return [nil]
   private def init_table(name, members)
     @db.execute("CREATE TABLE IF NOT EXISTS #{name} (#{members})")
-  end
-
-  # Return the user of the given user_id from the database
-  # @param user_id [Integer] the user_id of the user to be retrieved
-  # @return [Hash,nil] returns user hash if found or nil if not found
-  private def get_user(user_id)
-    user = @db.execute("SELECT * FROM User WHERE UserId=?", user_id)
-    return nil if user.empty?
-    return user.first
   end
 
   # Return the board of the given board_id from the database
@@ -649,7 +670,7 @@ class Validator
   # @param string [String] string to check
   # @return [TrueClass,FalseClass] boolean success value
   def self.password?(string)
-    string.length > 8
+    string.length >= 8
   end
 
   # Check if a string is a valid username
@@ -671,8 +692,7 @@ class Validator
 
 
     # Clear all outdated entries
-    @@attempt_hash.each do |key|
-      next if @@attempt_hash[key].nil?
+    @@attempt_hash.keys.each do |key|
       @@attempt_hash[key].select! do |timestamp|
         time - timestamp < 10
       end

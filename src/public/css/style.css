@@ -5,3 +5,11 @@
 .nodot {
 	list-style-type: none;
 }
+
+span.material-icons {
+	font-size: 1em;
+}
+
+.admin {
+	color: green;
+}

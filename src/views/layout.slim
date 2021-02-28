@@ -4,6 +4,7 @@ html lang="en"
     meta charset="UTF-8"/
     meta name="viewport" content="width=device-width, initial-scale=1.0"/
     link rel="stylesheet" href="/css/style.css"/
+    link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"
     title = page_name
   body
     header
@@ -14,5 +15,10 @@ html lang="en"
             a href="/login" Log In
           li
             a href="/register" Register
+          - if session[:user_id] > 0
+            li = "Logged in as #{session[:user]['UserName']}"
+            li
+              form#logout action="/action/user/logout" method="post"
+              a href="javascript:{}" onclick="document.getElementById('logout').submit(); return false;" Log Out
     hr
     == yield

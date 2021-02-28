@@ -2,10 +2,20 @@
   table
     tr
       td 
-        h2 = posts[:thread]['ThreadName']
+        h2 
+          a href="/home" Boards
+          = "/"
+          a href="/board/#{posts[:board]['BoardId']}" = posts[:board]['BoardName']
+          = "/"
+          = posts[:thread]['ThreadName']
     - posts[:posts].each do |post|
       tr
-        td = post['UserName']
+        - if post['UserPrivilege'] > 0
+          td.admin 
+            span.material-icons title="Administrator" shield
+            = post['UserName']
+        - else
+          td = post['UserName']
         td = post['PostContent']
         td = Time.at(post['PostCreationDate']) 
       tr

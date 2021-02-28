@@ -2,10 +2,18 @@
   table
     tr
       td
-        h2 = threads[:board]['BoardName']
+        h2 
+          a href="/home" Boards
+          = "/"
+          = threads[:board]['BoardName']
     - threads[:threads].each do |thread|
       tr
-        td = thread['UserName']
+        - if thread['UserPrivilege'] > 0
+          td.admin 
+            span.material-icons title="Administrator" shield
+            = thread['UserName']
+        - else
+          td = thread['UserName']
         td
           a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
         td = Time.at(thread['ThreadCreationDate']) 
