@@ -56,4 +56,4 @@ Idag har jag implementerat databas metoder för att få listor av boards, thread
 
 Jag har även skrivit om min `update_user()` metod så att jag nu kan hantera bilder.
 
-Jag är nu redo att skriva ett front end.
+Jag har även skrivit en minimal "frontend" som kan visa boards, trådar och posts i webbläsaren.

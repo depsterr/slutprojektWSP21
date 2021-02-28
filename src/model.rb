@@ -5,19 +5,32 @@ require 'sqlite3'
 
 require_relative 'view.rb'
 
+# Sinatra helpers
+helpers do
+  # get the name of the current page
+  # @return [String] the name of the current page
+  def page_name
+    if defined? docname
+      docname
+    else
+      $sitename
+    end
+  end
+
+  # Translate a local image filepath into it's absolute filepath
+  # on the web
+  # @param path [String] local filepath
+  # @return [String] web filepath
+  def local_to_web_path(path)
+    "/img/#{File.basename(path)}"
+  end
+end
+
 # Exit program printing an error message
 # @param msg [String] message to print before exit
 def die(msg)
   STDERR.puts(msg)
   exit 1
-end
-
-# Translate a local image filepath into it's absolute filepath
-# on the web
-# @param path [String] local filepath
-# @return [String] web filepath
-def local_to_web_path(path)
-  "/img/#{File.basename(path)}"
 end
 
 # Could use a report system which adds posts to unread for
@@ -495,17 +508,25 @@ class DataBase
 
   # Get a list of threads as well as their creator from a board
   # @param board_id [Integer] board to get threads from
-  # @return [Hash] Hash array with all user and thread database fields
+  # @return [Hash,String] Hash with :board board hash and :threads 
+  #                       array with all user and thread database fields.
+  #                       returns string on error.
   public def get_threads(board_id)
-    return $error['NOBOARD'] if get_board(board_id).nil?
-    @db.execute("SELECT * FROM Thread INNER JOIN User ON Thread.UserId=User.UserId "\
+
+    board = get_board(board_id)
+    return $error['NOBOARD'] if board.nil?
+
+    threads = @db.execute("SELECT * FROM Thread INNER JOIN User ON Thread.UserId=User.UserId "\
                 "WHERE BoardId=? ORDER BY ThreadStickied DESC, ThreadCreationDate ASC", board_id)
+
+    return { board: board, threads: threads }
   end
 
   # Get a list of posts as well as their creators from a thread
   # @param thread_id [Integer] thread to get posts from
-  # @return [Hash] Hash with :thread thread hash and :posts 
-  #                array with all user and post database fields.
+  # @return [Hash,String] Hash with :thread thread hash and :posts 
+  #                       array with all user and post database fields.
+  #                       returns string on error.
   public def get_posts(thread_id)
     thread = get_thread(thread_id)
     return $error['NOTHREAD'] if thread.nil?

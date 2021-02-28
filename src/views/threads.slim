@@ -1,0 +1,11 @@
+- unless threads.nil? || threads.empty?
+  table
+    tr
+      td
+        h2 = threads[:board]['BoardName']
+    - threads[:threads].each do |thread|
+      tr
+        td = thread['UserName']
+        td
+          a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
+        td = Time.at(thread['ThreadCreationDate']) 

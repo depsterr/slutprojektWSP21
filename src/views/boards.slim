@@ -1,0 +1,8 @@
+- unless boards.nil? || boards.empty?
+  table
+    - boards.each do |board|
+      tr
+        td = board['UserName']
+        td
+          a href = "/board/#{board['BoardId']}" = board['BoardName']
+        td = Time.at(board['BoardCreationDate']) 

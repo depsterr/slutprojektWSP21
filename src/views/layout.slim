@@ -6,4 +6,13 @@ html lang="en"
     link rel="stylesheet" href="/css/style.css"/
     title = page_name
   body
+    header
+      a#title href = "/home" = page_name
+      nav
+        ul.nodot
+          li 
+            a href="/login" Log In
+          li
+            a href="/register" Register
+    hr
     == yield

@@ -1,0 +1,12 @@
+- unless posts.nil? || posts.empty?
+  table
+    tr
+      td 
+        h2 = posts[:thread]['ThreadName']
+    - posts[:posts].each do |post|
+      tr
+        td = post['UserName']
+        td = post['PostContent']
+        td = Time.at(post['PostCreationDate']) 
+      tr
+        td = post['UserFooter']
