@@ -1,8 +1,18 @@
+h2 Boards
+- if admin?
+  form action="/action/board/new" method="post"
+    table
+      tr
+        td
+          p Create new board:
+        td
+          label for="title" Board title
+        td
+          input type="text" name="title"
+        td
+          input type="submit" value="Submit"
 - unless boards.nil? || boards.empty?
   table
-    tr
-      td 
-        h2 Boards
     - boards.each do |board|
       tr
         - if board['UserPrivilege'] > 0
@@ -14,3 +24,8 @@
         td
           a href = "/board/#{board['BoardId']}" = board['BoardName']
         td = Time.at(board['BoardCreationDate']) 
+        - if board['UserId'] == session['UserId'] || admin?
+          td
+            form action="/action/board/delete" method="post"
+              input type="hidden" name="board_id" value="#{board['BoardId']}"
+              input type="submit" value="delete"

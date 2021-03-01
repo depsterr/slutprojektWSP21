@@ -11,14 +11,18 @@ html lang="en"
       a#title href = "/home" = page_name
       nav
         ul.nodot
-          li 
-            a href="/login" Log In
-          li
-            a href="/register" Register
-          - if session[:user_id] > 0
-            li = "Logged in as #{session[:user]['UserName']}"
+          - if logged_in?
+            li
+              = "Logged in as "
+              a href="/user/#{session[:user_id]}" = session[:user]['UserName']
+              = admin? ? " [admin]" : ""
             li
               form#logout action="/action/user/logout" method="post"
-              a href="javascript:{}" onclick="document.getElementById('logout').submit(); return false;" Log Out
+              a href="javascript:{}" onclick="document.getElementById('logout').submit()" Log Out
+          - else
+            li 
+              a href="/login" Log In
+            li
+              a href="/register" Register
     hr
     == yield

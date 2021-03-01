@@ -1,13 +1,23 @@
+h2 
+  a href="/home" Boards
+  = "/"
+  a href="/board/#{posts[:board]['BoardId']}" = posts[:board]['BoardName']
+  = "/"
+  = posts[:thread]['ThreadName']
+- if logged_in?
+  form action="/action/post/new" method="post"
+    input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
+    table
+      tr
+        td
+          p Create a new post:
+        td align="right"
+          input type="submit" value="Post"
+      tr
+        td colspan="4"
+          textarea rows="18" cols="100" name="content"
 - unless posts.nil? || posts.empty?
   table
-    tr
-      td 
-        h2 
-          a href="/home" Boards
-          = "/"
-          a href="/board/#{posts[:board]['BoardId']}" = posts[:board]['BoardName']
-          = "/"
-          = posts[:thread]['ThreadName']
     - posts[:posts].each do |post|
       tr
         - if post['UserPrivilege'] > 0
@@ -16,7 +26,17 @@
             = post['UserName']
         - else
           td = post['UserName']
-        td = post['PostContent']
-        td = Time.at(post['PostCreationDate']) 
+        td
+          p == post['PostContent']
       tr
-        td = post['UserFooter']
+        td == post['UserFooter']
+        td align="right" = Time.at(post['PostCreationDate']) 
+      tr
+        / TODO: edit report
+        - if post['UserId'] == session['UserId'] || admin?
+            td
+              form action="/action/post/delete" method="post"
+                input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
+                input type="hidden" name="post_id" value="#{post['PostId']}"
+                input type="submit" value="delete"
+

@@ -1,3 +1,4 @@
+require 'sinatra'
 require 'digest'
 require 'bcrypt'
 require 'sanitize'
@@ -36,13 +37,25 @@ helpers do
     error_str($error[errorcode])
   end
 
-  # Handle return value
-  def handle_error(val)
-    if val.class == String
-      error_str(val)
-    end
+  # See if val is error
+  def error?(val)
+    val.class == String
   end
 
+  # Handle return value
+  def handle_error(val)
+    error_str(val) if error? val
+  end
+
+  # See if user is logged in
+  def logged_in?
+    session[:user_id] > 0 && !session[:user].nil?
+  end
+  
+  # See if user is admin
+  def admin?
+    logged_in? && session[:user]['UserPrivilege'] > 0
+  end
 end
 
 # Exit program printing an error message
@@ -160,6 +173,8 @@ class DataBase
   #   returns error string.
   public def login(user, pass, identifier)
 
+    return $error['BADREQ'] if user.nil? || pass.nil? || identifier.nil?
+
     user.strip!
     pass.strip!
 
@@ -185,6 +200,8 @@ class DataBase
   # @return [Integer,String] on sucess returns user id, otherwise
   #   returns error string.
   public def register(user, pass, repeat_pass, identifier)
+
+    return $error['BADREQ'] if user.nil? || pass.nil? || repeat_pass.nil? || identifier.nil?
 
     user.strip!
     pass.strip!
@@ -219,6 +236,8 @@ class DataBase
   # @option options [String] :image_path path to new image
   # @return [nil,String] returns error string on failure
   public def update_user(caller_id, options)
+
+    return $error['BADREQ'] if caller_id.nil? || options.nil?
 
     user = get_user(caller_id)
     return $error['NOUSER'] if user.nil?
@@ -282,6 +301,8 @@ class DataBase
   # @return [nil,String] returns error string on failure
   public def delete_user(user_id, caller_id)
 
+    return $error['BADREQ'] if user_id.nil? || caller_id.nil?
+
     user = get_user(user_id)
     return $error['NOUSER'] if user.nil?
 
@@ -300,8 +321,11 @@ class DataBase
   # Create a new board
   # @param board [String] name of board
   # @param caller_id [Integer] user id making call
-  # @return [nil,String] returns error string on failure
+  # @return [Integer,String] returns id of created board.
+  #                          returns error string on failure.
   public def create_board(board, caller_id)
+
+    return $error['BADREQ'] if board.nil? || caller_id.nil?
 
     board.strip!
     board = Validator.sanitize_name(board)
@@ -319,7 +343,7 @@ class DataBase
     @db.execute("INSERT INTO Board(BoardName,BoardCreationDate,UserId) VALUES(?,?,?)",
                 board, Time.now.to_i, caller_id)
 
-    nil
+    @db.execute("SELECT BoardId FROM Board WHERE BoardName=?", board).first['BoardId']
   end
 
   # Delete a board
@@ -327,6 +351,9 @@ class DataBase
   # @param caller_id [Integer] user id making call
   # @return [nil,String] returns error string on failure
   public def delete_board(board_id, caller_id)
+
+    return $error['BADREQ'] if board_id.nil? || caller_id.nil?
+
     user = get_user(caller_id)
     return $error['NOUSER'] if user.nil?
 
@@ -345,8 +372,11 @@ class DataBase
   # @param thread [String] name of thread
   # @param board_id [Integer] board to post to
   # @param caller_id [Integer] creator of thread
-  # @return [nil,String] returns error string on failure
+  # @return [Integer,String] returns id of created board.
+  #                          returns error string on failure.
   public def create_thread(thread, board_id, caller_id)
+
+    return $error['BADREQ'] if thread.nil? || board_id.nil? || caller_id.nil?
 
     thread.strip!
     thread = Validator.sanitize_name(thread)
@@ -359,10 +389,13 @@ class DataBase
     board = get_board(board_id)
     return $error['NOBOARD'] if board.nil?
 
+    return $error['TRHEADTAKEN'] unless @db.execute("SELECT ThreadId FROM Thread WHERE ThreadName=?",
+                                                   thread).empty?
+
     @db.execute("INSERT INTO Thread(ThreadName,ThreadCreationDate,ThreadStickied,"\
       "BoardId,UserId) VALUES(?,?,?,?,?)", thread, Time.now.to_i, 0, board_id, caller_id)
 
-    nil
+    @db.execute("SELECT ThreadId FROM Thread WHERE ThreadName=?", thread).first['ThreadId']
   end
 
   # Delete a thread
@@ -370,11 +403,14 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def delete_thread(thread_id, caller_id)
+
+    return $error['BADREQ'] if thread_id.nil? || caller_id.nil?
+
     user = get_user(caller_id)
     return $error['NOUSER'] if user.nil?
 
     thread = get_thread(thread_id)
-    return $error['NOTHREAD'] if board.nil?
+    return $error['NOTHREAD'] if thread.nil?
 
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       thread["UserId"] == user["UserId"]
@@ -391,7 +427,9 @@ class DataBase
   # @return [nil,String] returns error string on failure
   public def create_post(content, thread_id, caller_id)
 
-    content = content.strip!
+    return $error['BADREQ'] if content.nil? || thread_id.nil? || caller_id.nil?
+
+    content.strip!
     content = Validator.sanitize_content(content)
 
     return $error['BADCONTENT'] if content.empty?
@@ -420,11 +458,17 @@ class DataBase
     nil
   end
 
-  # Delete a post
+  # Delete a post. Deltes thread if the post deleted was
+  # the first in the thread.
   # @param post_id [Integer] post to delete
   # @param caller_id [Integer] issuer of call
-  # @return [nil,String] returns error string on failure
+  # @return [Bool,String] returns true if thread still exists
+  #                       and false if it was deleted.
+  #                       returns error string on failure.
   public def delete_post(post_id, caller_id)
+
+    return $error['BADREQ'] if post_id.nil? || caller_id.nil?
+
     user = get_user(caller_id)
     return $error['NOUSER'] if user.nil?
 
@@ -434,7 +478,14 @@ class DataBase
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       post["UserId"] == user["UserId"]
 
-    @db.execute("DELETE FROM Post WHERE PostId=?", post_id)
+    first_post = @db.execute("SELECT * FROM Post WHERE ThreadId=? "\
+                             "ORDER BY PostCreationDate ASC", post['ThreadId']).first
+
+    if first_post == post
+      @db.execute("DELETE FROM Thread WHERE ThreadId=?", post['ThreadId'])
+    else
+      @db.execute("DELETE FROM Post WHERE PostId=?", post_id)
+    end
 
     nil
   end
@@ -445,6 +496,9 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def update_sticky_thread(thread_id, sticky, caller_id)
+
+    return $error['BADREQ'] if thread_id.nil? || sticky.nil? || caller_id.nil?
+
     user = get_user(caller_id)
     return $error['NOUSER'] if user.nil?
 
@@ -466,6 +520,9 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def start_watching(thread_id, caller_id)
+
+    return $error['BADREQ'] if thread_id.nil? || caller_id.nil?
+
     return $error['NOTHREAD'] if get_thread(thread_id).nil?
     return $error['NOUSER'] if get_user(caller_id).nil?
 
@@ -483,6 +540,9 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def stop_watching(thread_id, caller_id)
+
+    return $error['BADREQ'] if thread_id.nil? || caller_id.nil?
+
     return $error['NOTHREAD'] if get_thread(thread_id).nil?
     return $error['NOUSER'] if get_user(caller_id).nil?
     @db.execute("DELETE FROM UserWatchingThread WHERE ThreadId=? AND UserId=?",
@@ -495,6 +555,9 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def get_unread(caller_id)
+
+    return $error['BADREQ'] if caller_id.nil?
+
     return $error['NOUSER'] if get_user(caller_id).nil?
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
                 "WHERE UserUnreadPost.UserId=?", caller_id)
@@ -507,6 +570,9 @@ class DataBase
   # @param caller_id [Integer] issuer of call
   # @return [nil,String] returns error string on failure
   public def mark_thread_read(thread_id, caller_id)
+
+    return $error['BADREQ'] if thread_id.nil? || caller_id.nil?
+
     return $error['NOTHREAD'] if get_thread(thread_id).nil?
     return $error['NOUSER'] if get_user(caller_id).nil?
     # My SQLite magnum opus!
@@ -532,6 +598,8 @@ class DataBase
   #                       returns string on error.
   public def get_threads(board_id)
 
+    return $error['BADREQ'] if board_id.nil?
+
     board = get_board(board_id)
     return $error['NOBOARD'] if board.nil?
 
@@ -547,6 +615,9 @@ class DataBase
   #                       and :posts hash array with all user and post
   #                       database fields. returns string on error.
   public def get_posts(thread_id)
+    
+    return $error['BADREQ'] if thread_id.nil?
+
     thread = get_thread(thread_id)
     return $error['NOTHREAD'] if thread.nil?
 
@@ -560,11 +631,28 @@ class DataBase
 
   # Return the user of the given user_id from the database
   # @param user_id [Integer] the user_id of the user to be retrieved
-  # @return [Hash,nil] returns user hash if found or nil if not found
+  # @return [Hash,nil] returns user hash with image info if found or nil if not found
   public def get_user(user_id)
+
+    return $error['BADREQ'] if user_id.nil?
+
     user = @db.execute("SELECT * FROM User WHERE UserId=?", user_id)
-    return nil if user.empty?
+    return $error['NOUSER'] if user.empty?
     return user.first
+  end
+
+  # Return the image of a given user_id
+  # @param user_id [Integer] the user_id who's image should be retrieved
+  # @return [Hash,nil] returns user hash with image info if found or nil if not found
+  public def get_image(user_id)
+
+    return $error['BADREQ'] if user_id.nil?
+
+    image = @db.execute("SELECT Image.ImageId,ImageMD5,ImageFilepath FROM User INNER JOIN Image ON "\
+                       "User.ImageId=Image.ImageId WHERE UserId=?", user_id)
+
+    return $error['NOIMAGE'] if image.empty?
+    return image.first
   end
 
   ########################

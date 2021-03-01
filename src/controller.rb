@@ -26,12 +26,11 @@ enable :sessions
 #  - [ ] Styling
 #  - [ ] Extra model.rb todos
 
+# Set up user_id and user
 before do
   session[:user_id] = 0 if session[:user_id].nil?
   unless session[:user_id] == 0
-    if session[:user] == nil
-      session[:user] = DataBase.new.get_user(session[:user_id])
-    end
+    session[:user] = DataBase.new.get_user(session[:user_id])
   else
     session[:user] = nil
   end
@@ -66,6 +65,24 @@ get '/thread/:thread' do
   slim :posts, locals: { posts: posts }
 end
 
+get '/user/:user' do
+  db = DataBase.new
+  user = db.get_user(params[:user].to_i)
+  handle_error(user)
+  image = db.get_image(user['UserId'])
+  handle_error(image)
+  slim :user, locals: { user: user, image: image }
+end
+
+get '/user/:user/edit' do
+  db = DataBase.new
+  user = db.get_user(params[:user].to_i)
+  handle_error(user)
+  image = db.get_image(user['UserId'])
+  handle_error(image)
+  slim :edit_user, locals: { user: user, image: image }
+end
+
 get '/register' do
   slim :register
 end
@@ -97,6 +114,62 @@ post '/action/:type/:action' do
     when "logout"
       session.destroy
       redirect to('/home')
+    end
+  when "board"
+    case params[:action]
+    when "new"
+      result = db.create_board(request["title"],
+                               session[:user_id])
+      handle_error(result)
+      redirect to("/board/#{result}")
+    when "delete"
+      result = db.delete_board(request["board_id"],
+                               session[:user_id])
+      handle_error(result)
+      redirect to('/home')
+    end
+  when "thread"
+    case params[:action]
+    when "new"
+      thread = db.create_thread(request["title"],
+                                request["board_id"].to_i,
+                                session[:user_id])
+      handle_error(thread)
+      post = db.create_post(request["content"],
+                              thread,
+                              session[:user_id])
+
+      # Remove already created thread
+      if error? post
+        db.delete_thread(thread, session[:user_id])
+        error_str(post)
+      end
+
+      redirect to("/thread/#{thread}")
+    when "delete"
+      result = db.delete_thread(request["thread_id"],
+                                session[:user_id])
+      handle_error(result)
+      redirect to("/board/#{request["board_id"]}")
+    end
+  when "post"
+    case params[:action]
+    when "new"
+      result = db.create_post(request["content"],
+                              request["thread_id"],
+                              session[:user_id])
+
+      handle_error(result)
+      redirect to("/thread/#{request["thread_id"]}")
+    when "delete"
+      result = db.delete_post(request["post_id"],
+                              session[:user_id])
+      handle_error(result)
+      if result
+        redirect to("/thread/#{request["thread_id"]}")
+      else
+        redirect to('/home')
+      end
     end
   end
   error_with('BADREQ')

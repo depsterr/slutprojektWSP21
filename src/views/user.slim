@@ -1,0 +1,10 @@
+- image = { 'ImageFilepath' => "" } if image.nil?
+- unless user.nil? || user.empty?
+  table
+    tr
+      td
+        h2 = user['UserName']
+        img alt="profile picute" src="#{local_to_web_path(image['ImageFilepath'])}"
+    tr
+      td
+        p = user['UserFooter']

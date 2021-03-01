@@ -1,11 +1,25 @@
+h2 
+  a href="/home" Boards
+  = "/"
+  = threads[:board]['BoardName']
+- if logged_in?
+  form action="/action/thread/new" method="post"
+    input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+    table
+      tr
+        td
+          p Create new thread:
+        td
+          label for="title" Thread title
+        td
+          input type="text" name="title"
+        td align="right"
+          input type="submit" value="Post"
+      tr
+        td colspan="4"
+          textarea rows="20" cols="100" name="content"
 - unless threads.nil? || threads.empty?
   table
-    tr
-      td
-        h2 
-          a href="/home" Boards
-          = "/"
-          = threads[:board]['BoardName']
     - threads[:threads].each do |thread|
       tr
         - if thread['UserPrivilege'] > 0
@@ -17,3 +31,11 @@
         td
           a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
         td = Time.at(thread['ThreadCreationDate']) 
+        tr
+          / TODO: watch/unwatch/mark read, sticky/unsticky
+        - if thread['UserId'] == session['UserId'] || admin?
+            td
+              form action="/action/thread/delete" method="post"
+                input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+                input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
+                input type="submit" value="delete"

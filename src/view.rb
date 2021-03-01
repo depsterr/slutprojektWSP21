@@ -12,6 +12,7 @@ $error = {
   'NOBOARD'     => "Board does not exist",
   'NOTHREAD'    => "Thread does not exist",
   'NOPOST'      => "Post does not exist",
+  'NOIMAGE'     => nil,
   'USERTAKEN'   => "Username already taken",
   'BOARDTAKEN'  => "A board with this name already exists",
   'THREADTAKEN' => "A thread with this name already exists",
@@ -25,7 +26,7 @@ $sanitize_opts = {
   name: {},
   # Post contents and user footers
   content: {
-    elements: ['b', 'i', 'a', 'ul', 'ol', 'li', 'table', 'tr', 'th', 'td', 'img'],
+    elements: ['b', 'i', 'a', 'ul', 'ol', 'li', 'table', 'tr', 'th', 'td', 'img', 'pre', 'code'],
     attributes: {
       'a' => ['href'],
       'img' => ['href', 'src', 'alt']
