@@ -10,19 +10,23 @@ html lang="en"
     header
       a#title href = "/home" = page_name
       nav
-        ul.nodot
+        table
+          tr
           - if logged_in?
-            li
+            td
               = "Logged in as "
               a href="/user/#{session[:user_id]}" = session[:user]['UserName']
               = admin? ? " [admin]" : ""
-            li
+            td
               form#logout action="/action/user/logout" method="post"
-              a href="javascript:{}" onclick="document.getElementById('logout').submit()" Log Out
+                input type="submit" value="Log out"
           - else
-            li 
-              a href="/login" Log In
-            li
-              a href="/register" Register
+            / Use forms instead of here to keep the look consistent with the log out button which needs to be a form
+            td
+              form#logout action="/register" method="get"
+                input type="submit" value="Register"
+            td
+              form#logout action="/login" method="get"
+                input type="submit" value="Log in"
     hr
     == yield
