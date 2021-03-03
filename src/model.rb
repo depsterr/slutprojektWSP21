@@ -693,6 +693,7 @@ class DataBase
   # Delete an image if no user uses it
   # @param image_id [Integer] image to remove
   private def delete_image_if_unused(image_id)
+    return if image_id == 1
     if image_id != nil && @db.execute("SELECT * FROM User WHERE ImageId=?", image_id).empty?
       # Remove image from disk too
       image_path = @db.execute("SELECT ImageFilepath FROM Image WHERE ImageId=?",
