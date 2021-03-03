@@ -595,7 +595,7 @@ class DataBase
   # Get a list of boards as well as their creator
   # @return [Hash Array] Hash array with all user and board database fields
   public def get_boards
-    @db.execute("SELECT * FROM User INNER JOIN Board ON Board.UserId=User.UserId "\
+    @db.execute("SELECT * FROM Board INNER JOIN User ON Board.UserId=User.UserId "\
                 "INNER JOIN Image WHERE User.ImageId=Image.ImageId "\
                 "ORDER BY BoardCreationDate DESC")
   end
