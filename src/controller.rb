@@ -31,14 +31,13 @@ enable :sessions
 # Set up user_id and user
 before do
   db = DataBase.new
-  session[:user_id] = 0 if session[:user_id].nil?
+  session[:user_id] = 0 if session[:image].nil?
   unless session[:user_id] == 0
     session[:user] = db.get_user(session[:user_id])
-    session[:image] = db.get_image(session[:user_id])
   else
     session[:user] = nil
-    session[:image] = nil
   end
+  session[:image] = {} if session[:image].nil?
 end
 
 get '/' do

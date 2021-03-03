@@ -663,7 +663,7 @@ class DataBase
                        "User.ImageId=Image.ImageId WHERE UserId=?", user_id)
 
     return $error['NOIMAGE'] if image.empty?
-    return image.first
+    image.first
   end
 
   ########################
