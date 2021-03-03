@@ -3,8 +3,14 @@
   table
     tr
       td
+        img.pfp_medium src="#{local_to_web_path(image['ImageFilepath'])}"
+      td
         h2 = user['UserName']
-        img alt="profile picute" src="#{local_to_web_path(image['ImageFilepath'])}"
     tr
       td
-        p = user['UserFooter']
+        h3 Footer
+        p == user['UserFooter']
+    - if user['UserId'] == session[:user_id]
+      tr
+        td
+          a href="/user/#{session[:user_id]}/edit" Edit user info

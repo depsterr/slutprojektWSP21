@@ -13,3 +13,27 @@ span.material-icons {
 .admin {
 	color: green;
 }
+
+.pfp_tiny {
+	max-height: 32px;
+	width: 32px;
+}
+
+.pfp_small {
+	max-height: 64px;
+	width: 64px;
+}
+
+.pfp_medium {
+	max-height: 128px;
+	width: 128px;
+}
+
+table {
+	max-width: 100%;
+	overflow: scroll;
+}
+
+img {
+	max-width: 80%;
+}

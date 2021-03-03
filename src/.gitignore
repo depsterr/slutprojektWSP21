@@ -3,3 +3,4 @@ Gemfile.lock
 .yardoc
 db/
 .*.dwp
+public/img

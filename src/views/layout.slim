@@ -9,12 +9,14 @@ html lang="en"
   body
     header
       a#title href = "/home" = page_name
+      hr
       nav
         table
           tr
           - if logged_in?
             td
-              = "Logged in as "
+              img.pfp_tiny src="#{local_to_web_path(session[:image]['ImageFilepath'])}"
+            td
               a href="/user/#{session[:user_id]}" = session[:user]['UserName']
               = admin? ? " [admin]" : ""
             td

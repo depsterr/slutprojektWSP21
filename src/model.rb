@@ -3,6 +3,7 @@ require 'digest'
 require 'bcrypt'
 require 'sanitize'
 require 'sqlite3'
+require 'fileutils'
 
 require_relative 'view.rb'
 
@@ -19,11 +20,13 @@ helpers do
   end
 
   # Translate a local image filepath into it's absolute filepath
-  # on the web
+  # on the web. This also makes sure that the default profile
+  # picture is used if none is found.
   # @param path [String] local filepath
   # @return [String] web filepath
   def local_to_web_path(path)
-    "/img/#{File.basename(path)}"
+    return "/img/#{File.basename(path)}" unless path.nil?
+    "/img/default.jpg"
   end
 
   # Redirect to error with error string
@@ -233,7 +236,7 @@ class DataBase
   # @param options [Hash] contains all information to update.
   # @option options [String] :name new username
   # @option options [String] :footer new footer
-  # @option options [String] :image_path path to new image
+  # @option options [String] :image path to new image
   # @return [nil,String] returns error string on failure
   public def update_user(caller_id, options)
 
@@ -245,7 +248,13 @@ class DataBase
     unless options[:name].nil?
       name = options[:name].strip
       return $error['BADUSER'] unless Validator.username? name
-      @db.execute("UPDATE User SET UserName=? WHERE UserId=?", name, caller_id)
+
+      result = @db.execute("SELECT * FROM User WHERE UserName=?", name)
+      unless result.empty?
+        @db.execute("UPDATE User SET UserName=? WHERE UserId=?", name, caller_id)
+      else
+        return $error['USERTAKEN'] if result['UserId'] != caller_id
+      end
     end
 
     unless options[:footer].nil?
@@ -256,12 +265,11 @@ class DataBase
 
     unless options[:image_path].nil?
       new_image = options[:image_path]
-      old_image = @db.execute("SELECT ImageId,ImageFilepath,ImageMD5 FROM User INNER JOIN Image WHERE "\
+      old_image = @db.execute("SELECT Image.ImageId,ImageFilepath,ImageMD5 FROM User INNER JOIN Image WHERE "\
                               "User.ImageId = Image.ImageId AND UserId=?", caller_id).first
 
       # Check if identical image exists
-      new_image_file = File.open(new_image)
-      md5_hash = Digest::MD5.hexdigest(new_image_file.read()) 
+      md5_hash = Digest::MD5.hexdigest(File.read(new_image)) 
 
       # Images with same digest
       matches = @db.execute("SELECT * FROM Image WHERE ImageMD5=?", md5_hash)
@@ -269,9 +277,9 @@ class DataBase
       if matches.empty?
         # Image is new
         # Move image into public folder and add it to database
-        new_image_file.rename("./public/img/#{new_image_file.basename}")
+        FileUtils.mv(new_image, "./public/img/#{File.basename(new_image)}")
         @db.execute("INSERT INTO Image(ImageMD5, ImageFilepath) VALUES(?,?)", md5_hash,
-                    "./public/img/#{new_image_file.basename}")
+                    "./public/img/#{File.basename(new_image)}")
 
         # Update user image
         image_id = @db.execute("SELECT ImageId FROM Image WHERE ImageMD5=?", md5_hash).first['ImageId']
@@ -286,9 +294,7 @@ class DataBase
         # Update user image
         @db.execute("UPDATE User SET ImageId=? WHERE UserId=?", image_id, caller_id)
         # Delete old image if no longer used
-        delete_image_if_unused(old_image['ImageId'])
-        # Delete uploaded image since an identical image was present
-        new_image_file.delete
+        delete_image_if_unused(old_image['ImageId']) unless old_image.nil?
       end
     end
 
@@ -483,8 +489,10 @@ class DataBase
 
     if first_post == post
       @db.execute("DELETE FROM Thread WHERE ThreadId=?", post['ThreadId'])
+      return false
     else
       @db.execute("DELETE FROM Post WHERE PostId=?", post_id)
+      return true
     end
 
     nil
@@ -587,14 +595,15 @@ class DataBase
   # Get a list of boards as well as their creator
   # @return [Hash Array] Hash array with all user and board database fields
   public def get_boards
-    @db.execute("SELECT * FROM Board INNER JOIN User ON Board.UserId=User.UserId "\
+    @db.execute("SELECT * FROM User INNER JOIN Board ON Board.UserId=User.UserId "\
+                "INNER JOIN Image WHERE User.ImageId=Image.ImageId "\
                 "ORDER BY BoardCreationDate DESC")
   end
 
   # Get a list of threads as well as their creator from a board
   # @param board_id [Integer] board to get threads from
   # @return [Hash,String] Hash with :board board hash and :threads 
-  #                       array with all user and thread database fields.
+  #                       array with all user, image and thread database fields.
   #                       returns string on error.
   public def get_threads(board_id)
 
@@ -604,6 +613,7 @@ class DataBase
     return $error['NOBOARD'] if board.nil?
 
     threads = @db.execute("SELECT * FROM Thread INNER JOIN User ON Thread.UserId=User.UserId "\
+                "INNER JOIN Image ON Image.ImageId=User.ImageId "\
                 "WHERE BoardId=? ORDER BY ThreadStickied DESC, ThreadCreationDate ASC", board_id)
 
     return { board: board, threads: threads }
@@ -612,7 +622,7 @@ class DataBase
   # Get a list of posts as well as their creators from a thread
   # @param thread_id [Integer] thread to get posts from
   # @return [Hash,String] Hash with :thread thread hash :board board hash
-  #                       and :posts hash array with all user and post
+  #                       and :posts hash array with all user, image and post
   #                       database fields. returns string on error.
   public def get_posts(thread_id)
     
@@ -623,8 +633,9 @@ class DataBase
 
     board = get_board(thread['BoardId'])
 
-    posts = @db.execute("SELECT * FROM Post INNER JOIN User ON Post.UserId=User.UserId "\
-                "WHERE ThreadId=? ORDER BY PostCreationDate ASC", thread_id)
+    posts = @db.execute("SELECT * FROM User INNER JOIN Post ON Post.UserId=User.UserId "\
+                        "INNER JOIN Image ON Image.ImageId=User.ImageId "\
+                        "WHERE ThreadId=? ORDER BY PostCreationDate ASC", thread_id)
 
     return { thread: thread, board: board, posts: posts }
   end

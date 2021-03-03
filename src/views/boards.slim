@@ -1,5 +1,6 @@
 h2 Boards
 - if admin?
+  hr
   form action="/action/board/new" method="post"
     table
       tr
@@ -12,15 +13,19 @@ h2 Boards
         td
           input type="submit" value="Submit"
 - unless boards.nil? || boards.empty?
-  table
-    - boards.each do |board|
+  - boards.each do |board|
+    hr
+    table
       tr
-        - if board['UserPrivilege'] > 0
-          td.admin 
-            span.material-icons title="Administrator" shield
-            = board['UserName']
-        - else
-          td = board['UserName']
+        td
+          img.pfp_tiny src="#{local_to_web_path(board['ImageFilepath'])}"
+        td
+          - if board['UserPrivilege'] > 0
+            a.admin href="/user/#{board['UserId']}"
+              span.material-icons title="Administrator" shield
+              = board['UserName']
+          - else
+            a href="/user/#{board['UserId']}" = board['UserName']
         td
           a href = "/board/#{board['BoardId']}" = board['BoardName']
         td = Time.at(board['BoardCreationDate']) 

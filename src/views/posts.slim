@@ -5,6 +5,7 @@ h2
   = "/"
   = posts[:thread]['ThreadName']
 - if logged_in?
+  hr
   form action="/action/post/new" method="post"
     input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
     table
@@ -17,26 +18,48 @@ h2
         td colspan="4"
           textarea rows="18" cols="100" name="content"
 - unless posts.nil? || posts.empty?
-  table
-    - posts[:posts].each do |post|
+  - posts[:posts].each do |post|
+    hr
+    table
       tr
-        - if post['UserPrivilege'] > 0
-          td.admin 
-            span.material-icons title="Administrator" shield
-            = post['UserName']
-        - else
-          td = post['UserName']
         td
+          table
+            tr
+              td align="center"
+                img.pfp_medium alt="profile picute" src="#{local_to_web_path(post['ImageFilepath'])}"
+            tr
+              td align="center"
+                - if post['UserPrivilege'] > 0
+                  a.admin href="/user/#{post['UserId']}"
+                    span.material-icons title="Administrator" shield
+                    = post['UserName']
+                - else
+                  a href="/user/#{post['UserId']}" = post['UserName']
+        td valign="top"
           p == post['PostContent']
       tr
-        td == post['UserFooter']
-        td align="right" = Time.at(post['PostCreationDate']) 
+        td colspan="2"
+          == post['UserFooter']
       tr
-        / TODO: edit report
-        - if post['UserId'] == session['UserId'] || admin?
-            td
-              form action="/action/post/delete" method="post"
+        td colspan="2"
+          table
+            tr
+              p = Time.at(post['PostCreationDate'])
+            tr
+              td
+                form action="/action/post/report" method="post"
                 input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
-                input type="hidden" name="post_id" value="#{post['PostId']}"
-                input type="submit" value="delete"
+                input type="hidden" value="#{post['PostId']}" name="post"
+                input type="submit" value="report"
+              - if post['UserId'] == session[:user_id]
+                  td
+                    form action="/post/#{post['PostId']}/edit" method="get"
+                    input type="submit" value="edit"
+              - if post['UserId'] == session['UserId'] || admin?
+                  td
+                    form action="/action/post/delete" method="post"
+                      input type="hidden" name="board_id" value="#{posts[:board]['BoardId']}"
+                      input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
+                      input type="hidden" name="post_id" value="#{post['PostId']}"
+                      input type="submit" value="delete"
 

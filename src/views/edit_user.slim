@@ -1,11 +1,18 @@
 - image = { 'ImageFilepath' => "" } if image.nil?
 - unless user.nil? || user.empty?
-  form action="/action/user/edit" method="post"
+  form action="/action/user/edit" method="post" enctype="multipart/form-data"
     table
       tr
         td
-          h2 = user['UserName']
-          img alt="profile picute" src="#{local_to_web_path(image['ImageFilepath'])}"
+          img.pfp_medium src="#{local_to_web_path(image['ImageFilepath'])}"
+        td
+          input type="file" name="file"
       tr
         td
-          p = user['UserFooter']
+          input type="text" value="#{user['UserName']}" name="username"
+      tr
+        td
+          textarea rows="18" cols="100" name="footer" == "#{user['UserFooter']}"
+      tr
+        td
+          input type="submit" value="Update"

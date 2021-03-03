@@ -3,6 +3,7 @@ h2
   = "/"
   = threads[:board]['BoardName']
 - if logged_in?
+  hr
   form action="/action/thread/new" method="post"
     input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
     table
@@ -19,22 +20,26 @@ h2
         td colspan="4"
           textarea rows="20" cols="100" name="content"
 - unless threads.nil? || threads.empty?
-  table
-    - threads[:threads].each do |thread|
+  - threads[:threads].each do |thread|
+    hr
+    table
       tr
-        - if thread['UserPrivilege'] > 0
-          td.admin 
-            span.material-icons title="Administrator" shield
-            = thread['UserName']
-        - else
-          td = thread['UserName']
+        td.auto
+          img.pfp_tiny alt="profile picute" src="#{local_to_web_path(thread['ImageFilepath'])}"
+        td
+          - if thread['UserPrivilege'] > 0
+            a.admin href="/user/#{thread['UserId']}"
+              span.material-icons title="Administrator" shield
+              = thread['UserName']
+          - else
+            a href="/user/#{post['UserId']}" = post['UserName']
         td
           a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
         td = Time.at(thread['ThreadCreationDate']) 
         tr
           / TODO: watch/unwatch/mark read, sticky/unsticky
         - if thread['UserId'] == session['UserId'] || admin?
-            td
+            td colspan="3"
               form action="/action/thread/delete" method="post"
                 input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
                 input type="hidden" name="thread_id" value="#{thread['ThreadId']}"

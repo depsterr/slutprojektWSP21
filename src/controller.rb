@@ -19,20 +19,25 @@ enable :sessions
 #  - [x] Error page
 #  - [x] Register page
 #  - [x] Log in page
-#  - [ ] REST routes för att interagera med DataBase klassen
-#        (skulle kunna använda en lookup table approach?)
-#  - [ ] User profile page
-#  - [ ] User options
-#  - [ ] Styling
+#  - [x] REST routes för att interagera med DataBase klassen
+#  - [x] User profile page
+#  - [x] User options
+#  - [ ] Watch
+#  - [ ] Mark as read
+#  - [ ] Editing
+#  - [ ] Reporting
 #  - [ ] Extra model.rb todos
 
 # Set up user_id and user
 before do
+  db = DataBase.new
   session[:user_id] = 0 if session[:user_id].nil?
   unless session[:user_id] == 0
-    session[:user] = DataBase.new.get_user(session[:user_id])
+    session[:user] = db.get_user(session[:user_id])
+    session[:image] = db.get_image(session[:user_id])
   else
     session[:user] = nil
+    session[:image] = nil
   end
 end
 
@@ -75,6 +80,9 @@ get '/user/:user' do
 end
 
 get '/user/:user/edit' do
+  if session[:user_id] != params[:user].to_i
+    redirect to("/user/#{params[:user]}")
+  end
   db = DataBase.new
   user = db.get_user(params[:user].to_i)
   handle_error(user)
@@ -111,6 +119,19 @@ post '/action/:type/:action' do
       handle_error(result)
       session[:user_id] = result
       redirect to('/home')
+    when "edit"
+      if defined?(params["file"]) && !params["file"].nil? && !params["file"].nil? 
+        filename = params["file"]["tempfile"].path
+      else
+        filename = nil
+      end
+      result = db.update_user(session[:user_id], {
+        name: request['username'],
+        image_path: filename,
+        footer: request['footer']
+      })
+      handle_error(result)
+      redirect to("/user/#{session[:user_id]}")
     when "logout"
       session.destroy
       redirect to('/home')
@@ -168,7 +189,7 @@ post '/action/:type/:action' do
       if result
         redirect to("/thread/#{request["thread_id"]}")
       else
-        redirect to('/home')
+        redirect to("/board/#{request["board_id"]}")
       end
     end
   end
