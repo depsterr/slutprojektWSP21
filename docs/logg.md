@@ -61,3 +61,7 @@ Jag har även skrivit en minimal "frontend" som kan visa boards, trådar och pos
 # Måndag 1e Mars
 
 Idag har jag implementerat en simple frontend och några REST routes. Nu kan användare registreras, loggas in, logga ut, skapa boards, threads och posts.
+
+# Onsdag 3e Mars
+
+Idag så har jag implementerat en user page, user setting page som låter en ladd up en profil bild, fixat lite med styling, och lagt till länkar till användar sidorna då man klickar på en användare.
