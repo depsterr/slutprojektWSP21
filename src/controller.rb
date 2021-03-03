@@ -34,10 +34,8 @@ before do
   session[:user_id] = 0 if session[:user_id].nil?
   unless session[:user_id] == 0
     session[:user] = db.get_user(session[:user_id])
-  else
-    session[:user] = nil
+    session[:image] = db.get_image(session[:user_id])
   end
-  session[:image] = {} if session[:image].nil?
 end
 
 get '/' do

@@ -32,7 +32,7 @@ h2
               span.material-icons title="Administrator" shield
               = thread['UserName']
           - else
-            a href="/user/#{post['UserId']}" = post['UserName']
+            a href="/user/#{thread['UserId']}" = thread['UserName']
         td
           a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
         td = Time.at(thread['ThreadCreationDate']) 

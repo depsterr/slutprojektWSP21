@@ -165,7 +165,7 @@ class DataBase
       "FOREIGN KEY(PostId) REFERENCES Post(PostId) ON DELETE CASCADE")
 
     image_file = "./public/img/default.jpg"
-    md5_hash = Digest::MD5.hexdigest(File.read(image_file)
+    md5_hash = Digest::MD5.hexdigest(File.read(image_file))
 
     @db.execute("INSERT INTO Image(ImageMD5, ImageFilepath) VALUES(?,?)",
                 md5_hash, image_file)
