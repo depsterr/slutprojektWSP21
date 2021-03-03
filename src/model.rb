@@ -122,7 +122,7 @@ class DataBase
       "UserFooter STRING NOT NULL,"\
       "UserPrivilege INTEGER NOT NULL,"\
       "UserRegistrationDate INTEGER NOT NULL,"\
-      "ImageId INTEGER,"\
+      "ImageId INTEGER NOT NULL,"\
       "FOREIGN KEY(ImageId) REFERENCES Image(ImageId)")
 
     init_table("Hash", "HashId INTEGER PRIMARY KEY AUTOINCREMENT,"\
@@ -163,6 +163,12 @@ class DataBase
       "PostId INTEGER NOT NULL,"\
       "FOREIGN KEY(UserId) REFERENCES User(UserId) ON DELETE CASCADE,"\
       "FOREIGN KEY(PostId) REFERENCES Post(PostId) ON DELETE CASCADE")
+
+    image_file = "./public/img/default.jpg"
+    md5_hash = Digest::MD5.hexdigest(File.read(image_file)
+
+    @db.execute("INSERT INTO Image(ImageMD5, ImageFilepath) VALUES(?,?)",
+                md5_hash, image_file)
 
     nil
   end
@@ -219,8 +225,8 @@ class DataBase
     return $error['USERTAKEN'] unless result.empty?
 
     pass_digest = BCrypt::Password.create(pass)
-    @db.execute("INSERT INTO User(UserName, UserFooter, UserPrivilege, UserRegistrationDate)"\
-      "VALUES(?,?,?,?)", user, "I'm new here!", 0, Time.now.to_i)
+    @db.execute("INSERT INTO User(UserName, UserFooter, UserPrivilege, UserRegistrationDate, ImageId)"\
+      "VALUES(?,?,?,?,1)", user, "I'm new here!", 0, Time.now.to_i)
 
     id = @db.execute("SELECT UserId FROM User WHERE UserName=?", user).first["UserId"]
 
