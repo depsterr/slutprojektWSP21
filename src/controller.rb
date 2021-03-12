@@ -25,6 +25,8 @@ enable :sessions
 #  - [x] Watch
 #  - [x] Mark as read
 #  - [ ] Highlight unread posts in threads
+#  - [ ] Unread posts/notification page
+#  - [ ] Fix REST routes
 #  - [ ] Editing
 #  - [ ] Reporting
 #  - [ ] Extra model.rb todos
@@ -108,6 +110,7 @@ get '/login' do
   slim :login
 end
 
+#### Actions which do not need an id ###
 post '/action/:type/:action' do
   db = DataBase.new
   case params[:type]
@@ -152,11 +155,6 @@ post '/action/:type/:action' do
                                session[:user_id])
       handle_error(result)
       redirect to("/board/#{result}")
-    when "delete"
-      result = db.delete_board(request["board_id"],
-                               session[:user_id])
-      handle_error(result)
-      redirect to('/home')
     end
   when "thread"
     case params[:action]
@@ -176,26 +174,6 @@ post '/action/:type/:action' do
       end
 
       redirect to("/thread/#{thread}")
-    when "delete"
-      result = db.delete_thread(request["thread_id"],
-                                session[:user_id])
-      handle_error(result)
-      redirect to("/board/#{request["board_id"]}")
-    when "watch"
-      result = db.start_watching(request["thread_id"],
-                                 session[:user_id])
-      handle_error(result)
-      redirect to("/board/#{request["board_id"]}")
-    when "unwatch"
-      result = db.stop_watching(request["thread_id"],
-                                session[:user_id])
-      handle_error(result)
-      redirect to("/board/#{request["board_id"]}")
-    when "mark_read"
-      result = db.mark_thread_read(request["thread_id"],
-                                   session[:user_id])
-      handle_error(result)
-      redirect to("/board/#{request["board_id"]}")
     end
   when "post"
     case params[:action]
@@ -206,16 +184,67 @@ post '/action/:type/:action' do
 
       handle_error(result)
       redirect to("/thread/#{request["thread_id"]}")
-    when "delete"
-      result = db.delete_post(request["post_id"],
-                              session[:user_id])
-      handle_error(result)
-      if result
-        redirect to("/thread/#{request["thread_id"]}")
-      else
-        redirect to("/board/#{request["board_id"]}")
-      end
     end
+  end
+  error_with('BADREQ')
+end
+
+#### Actions which do need an id ###
+post '/action/board/:board_id/:action' do
+  db = DataBase.new
+  case params[:action]
+  when "delete"
+    result = db.delete_board(params[:board_id],
+                             session[:user_id])
+    handle_error(result)
+    redirect to('/home')
+  end
+  error_with('BADREQ')
+end
+post '/action/thread/:thread_id/:action' do
+  db = DataBase.new
+  case params[:action]
+  when "delete"
+    result = db.delete_thread(params[:thread_id],
+                              session[:user_id])
+    handle_error(result)
+    redirect to("/board/#{request["board_id"]}")
+  when "watch"
+    result = db.start_watching(params[:thread_id],
+                               session[:user_id])
+    handle_error(result)
+    redirect to("/board/#{request["board_id"]}")
+  when "unwatch"
+    result = db.stop_watching(params[:thread_id],
+                              session[:user_id])
+    handle_error(result)
+    redirect to("/board/#{request["board_id"]}")
+  when "mark_read"
+    result = db.mark_thread_read(params[:thread_id],
+                                 session[:user_id])
+    handle_error(result)
+    redirect to("/board/#{request["board_id"]}")
+  end
+  error_with('BADREQ')
+end
+
+post '/action/post/:post_id/:action' do
+  db = DataBase.new
+  case params[:action]
+  when "delete"
+    result = db.delete_post(params[:post_id],
+                            session[:user_id])
+    handle_error(result)
+    if result
+      redirect to("/thread/#{request["thread_id"]}")
+    else
+      redirect to("/board/#{request["board_id"]}")
+    end
+  when "report"
+    result = db.report(params[:thread_id],
+                       session[:user_id])
+    handle_error(result)
+    redirect to("/board/#{request["thread_id"]}")
   end
   error_with('BADREQ')
 end

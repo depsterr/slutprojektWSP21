@@ -65,3 +65,11 @@ Idag har jag implementerat en simple frontend och några REST routes. Nu kan anv
 # Onsdag 3e Mars
 
 Idag så har jag implementerat en user page, user setting page som låter en ladd up en profil bild, fixat lite med styling, och lagt till länkar till användar sidorna då man klickar på en användare.
+
+# Mellan lektioner (kommer ej ihåg datum)
+
+Jag har implementerat ett watch + unread system
+
+# Fri 12e mars
+
+Idag så har jag fixat mina routes så att de följer REST standarden.

@@ -20,15 +20,15 @@ html lang="en"
               a href="/user/#{session[:user_id]}" = session[:user]['UserName']
               = admin? ? " [admin]" : ""
             td
-              form#logout action="/action/user/logout" method="post"
+              form action="/action/user/logout" method="post"
                 input type="submit" value="Log out"
           - else
             / Use forms instead of here to keep the look consistent with the log out button which needs to be a form
             td
-              form#logout action="/register" method="get"
+              form action="/register" method="get"
                 input type="submit" value="Register"
             td
-              form#logout action="/login" method="get"
+              form action="/login" method="get"
                 input type="submit" value="Log in"
     hr
     == yield

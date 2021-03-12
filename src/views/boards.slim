@@ -31,6 +31,5 @@ h2 Boards
         td = Time.at(board['BoardCreationDate']) 
         - if board['UserId'] == session['UserId'] || admin?
           td
-            form action="/action/board/delete" method="post"
-              input type="hidden" name="board_id" value="#{board['BoardId']}"
+            form action="/action/board/#{board['BoardId']}/delete" method="post"
               input type="submit" value="delete"

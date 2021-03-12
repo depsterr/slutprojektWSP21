@@ -45,24 +45,21 @@ h2
           tr
             td
               - if watches.include? thread['ThreadId'] 
-                form action="/action/thread/unwatch" method="post"
+                form action="/action/thread/#{thread['ThreadId']}/unwatch" method="post"
                   input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
-                  input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
+                  input type="hidden" name="thread_id" value=""
                   input type="submit" value="Stop watching"
               - else
-                form action="/action/thread/watch" method="post"
+                form action="/action/thread/#{thread['ThreadId']}/watch" method="post"
                   input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
-                  input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
                   input type="submit" value="Watch thread"
               - if unread.map do |hash| hash['ThreadId'] end.include? thread['ThreadId']
                 td
-                  form action="/action/thread/mark_read" method="post"
+                  form action="/action/thread/#{thread['ThreadId']}/mark_read" method="post"
                     input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
-                    input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
                     input type="submit" value="Mark as read"
               - if thread['UserId'] == session['UserId'] || admin?
                 td
-                  form action="/action/thread/delete" method="post"
+                  form action="/action/thread/#{thread['ThreadId']}/delete" method="post"
                     input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
-                    input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
                     input type="submit" value="delete"
