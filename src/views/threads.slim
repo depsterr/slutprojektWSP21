@@ -36,11 +36,33 @@ h2
         td
           a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
         td = Time.at(thread['ThreadCreationDate']) 
-        tr
-          / TODO: watch/unwatch/mark read, sticky/unsticky
-        - if thread['UserId'] == session['UserId'] || admin?
-            td colspan="3"
-              form action="/action/thread/delete" method="post"
-                input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
-                input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
-                input type="submit" value="delete"
+        - if unread.map do |hash| hash['ThreadId'] end.include? thread['ThreadId']
+          td
+            b = "#{unread.map do |hash| hash['ThreadId'] end.length} Unread Post!"
+    - if logged_in?
+        / TODO: watch/unwatch/mark read, sticky/unsticky
+        table
+          tr
+            td
+              - if watches.include? thread['ThreadId'] 
+                form action="/action/thread/unwatch" method="post"
+                  input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+                  input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
+                  input type="submit" value="Stop watching"
+              - else
+                form action="/action/thread/watch" method="post"
+                  input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+                  input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
+                  input type="submit" value="Watch thread"
+              - if unread.map do |hash| hash['ThreadId'] end.include? thread['ThreadId']
+                td
+                  form action="/action/thread/mark_read" method="post"
+                    input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+                    input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
+                    input type="submit" value="Mark as read"
+              - if thread['UserId'] == session['UserId'] || admin?
+                td
+                  form action="/action/thread/delete" method="post"
+                    input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+                    input type="hidden" name="thread_id" value="#{thread['ThreadId']}"
+                    input type="submit" value="delete"

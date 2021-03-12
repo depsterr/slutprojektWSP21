@@ -567,16 +567,32 @@ class DataBase
 
   # Get a list of unread posts
   # @param caller_id [Integer] issuer of call
-  # @return [nil,String] returns error string on failure
+  # @return [Array,String] returns array of post ids which are unread.
+  #                        returns error string on failure
   public def get_unread(caller_id)
 
-    return $error['BADREQ'] if caller_id.nil?
+    return [] if caller_id.nil?
 
-    return $error['NOUSER'] if get_user(caller_id).nil?
+    return [] if get_user(caller_id).nil?
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
                 "WHERE UserUnreadPost.UserId=?", caller_id)
+  end
 
-    nil
+  # Get a list of watched posts
+  # @param caller_id [Integer] issuer of call
+  # @return [Array] returns an erroy of watched thread ids on success.
+  #                 returns empty array on fail.
+  public def get_watched(caller_id)
+
+    return [] if caller_id.nil?
+    return [] if get_user(caller_id).nil?
+
+    result = @db.execute("SELECT ThreadId FROM UserWatchingThread WHERE UserId=?", caller_id)
+    return [] if result.nil?
+
+    return result.map do |hash|
+      hash['ThreadId']
+    end
   end
 
   # Mark a thread as unread

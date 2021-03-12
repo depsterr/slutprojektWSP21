@@ -22,8 +22,9 @@ enable :sessions
 #  - [x] REST routes för att interagera med DataBase klassen
 #  - [x] User profile page
 #  - [x] User options
-#  - [ ] Watch
-#  - [ ] Mark as read
+#  - [x] Watch
+#  - [x] Mark as read
+#  - [ ] Highlight unread posts in threads
 #  - [ ] Editing
 #  - [ ] Reporting
 #  - [ ] Extra model.rb todos
@@ -57,13 +58,24 @@ get '/board/:board' do
   db = DataBase.new
   threads = db.get_threads(params[:board].to_i)
   handle_error(threads)
-  slim :threads, locals: { threads: threads }
+  watches = []
+  unread = []
+  if logged_in?
+    watches = db.get_watched(session[:user_id])
+    unread  = db.get_unread(session[:user_id])
+  end
+  slim :threads, locals: { threads: threads, watches: watches, unread: unread }
 end
 
 get '/thread/:thread' do
   db = DataBase.new
   posts = db.get_posts(params[:thread].to_i)
   handle_error(posts)
+  if logged_in?
+    result = db.mark_thread_read(params[:thread],
+                                 session[:user_id])
+    handle_error(result)
+  end
   slim :posts, locals: { posts: posts }
 end
 
@@ -167,6 +179,21 @@ post '/action/:type/:action' do
     when "delete"
       result = db.delete_thread(request["thread_id"],
                                 session[:user_id])
+      handle_error(result)
+      redirect to("/board/#{request["board_id"]}")
+    when "watch"
+      result = db.start_watching(request["thread_id"],
+                                 session[:user_id])
+      handle_error(result)
+      redirect to("/board/#{request["board_id"]}")
+    when "unwatch"
+      result = db.stop_watching(request["thread_id"],
+                                session[:user_id])
+      handle_error(result)
+      redirect to("/board/#{request["board_id"]}")
+    when "mark_read"
+      result = db.mark_thread_read(request["thread_id"],
+                                   session[:user_id])
       handle_error(result)
       redirect to("/board/#{request["board_id"]}")
     end
