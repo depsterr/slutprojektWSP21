@@ -1,0 +1,10 @@
+- unless user.nil? || user.empty? || post.nil? || post.empty?
+  form action="/action/post/#{post['PostId']}/edit" method="post" enctype="multipart/form-data"
+    input type="hidden" name="thread_id" value="#{post['ThreadId']}"
+    table
+      tr
+        td
+          textarea rows="18" cols="100" name="content" == "#{post['PostContent']}"
+      tr
+        td
+          input type="submit" value="Update"

@@ -102,6 +102,13 @@ get '/user/:user/edit' do
   slim :edit_user, locals: { user: user, image: image }
 end
 
+get '/post/:post_id/edit' do
+  db = DataBase.new
+  post = db.get_post params[:post_id].to_i
+  user = db.get_user session[:user_id]
+  slim :edit_post, locals: { post: post, user: user }
+end
+
 get '/register' do
   slim :register
 end
@@ -241,10 +248,15 @@ post '/action/post/:post_id/:action' do
       redirect to("/board/#{request["board_id"]}")
     end
   when "report"
-    result = db.report(params[:thread_id],
-                       session[:user_id])
+    result = db.report(params[:post_id])
     handle_error(result)
-    redirect to("/board/#{request["thread_id"]}")
+    redirect to("/thread/#{request["thread_id"]}")
+  when "edit"
+    result = db.edit_post(request["content"],
+                          params[:post_id],
+                          session[:user_id])
+    handle_error(result)
+    redirect to("/thread/#{request["thread_id"]}")
   end
   error_with('BADREQ')
 end

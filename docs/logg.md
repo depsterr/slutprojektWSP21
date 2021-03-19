@@ -73,3 +73,7 @@ Jag har implementerat ett watch + unread system
 # Fri 12e mars
 
 Idag så har jag fixat mina routes så att de följer REST standarden.
+
+# Fri 19e mars
+
+Idag så har jag skapat en sida för att redigera posts samt implementerat en report funktion.

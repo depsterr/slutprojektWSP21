@@ -49,13 +49,13 @@ h2
               tr
                 td
                   form action="/action/post/#{post['PostId']}/report" method="post"
-                  input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
-                  input type="submit" value="report"
+                    input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
+                    input type="submit" value="report"
                 - if post['UserId'] == session[:user_id]
                     td
                       form action="/post/#{post['PostId']}/edit" method="get"
-                      input type="submit" value="edit"
-                - if post['UserId'] == session['UserId'] || admin?
+                        input type="submit" value="edit"
+                - if post['UserId'] == session[:user_id] || admin?
                     td
                       form action="/action/post/#{post['PostId']}/delete" method="post"
                         input type="hidden" name="board_id" value="#{posts[:board]['BoardId']}"
