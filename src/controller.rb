@@ -24,11 +24,12 @@ enable :sessions
 #  - [x] User options
 #  - [x] Watch
 #  - [x] Mark as read
-#  - [ ] Highlight unread posts in threads
+#  - [x] Highlight unread posts in threads
+#  - [ ] Sticky
 #  - [ ] Unread posts/notification page
-#  - [ ] Fix REST routes
-#  - [ ] Editing
-#  - [ ] Reporting
+#  - [x] Fix REST routes
+#  - [#] Editing (boards and thread titles?)
+#  - [x] Reporting
 #  - [ ] Extra model.rb todos
 
 # Set up user_id and user
@@ -41,21 +42,26 @@ before do
   end
 end
 
+# Redirect traffic to / to the home route
 get '/' do
   redirect to('/home')
 end
 
+# Displays the session error string and then resets
+# the session error string.
 get '/error' do
   error = session[:error]
   session.delete(:error)
   slim :error, locals: { error: error }
 end
 
+# The homepage, displays the current boards
 get '/home' do
   db = DataBase.new
   slim :boards, locals: { boards: db.get_boards }
 end
 
+# Displays the threads of the board with board_id :board
 get '/board/:board' do
   db = DataBase.new
   threads = db.get_threads(params[:board].to_i)
@@ -69,18 +75,22 @@ get '/board/:board' do
   slim :threads, locals: { threads: threads, watches: watches, unread: unread }
 end
 
+# Displays the posts of the thread with thread_id :thread
 get '/thread/:thread' do
   db = DataBase.new
   posts = db.get_posts(params[:thread].to_i)
   handle_error(posts)
+  unreads = []
   if logged_in?
+    unreads = db.get_unread(session[:user_id])
     result = db.mark_thread_read(params[:thread],
                                  session[:user_id])
     handle_error(result)
   end
-  slim :posts, locals: { posts: posts }
+  slim :posts, locals: { posts: posts, unreads: unreads.map { |unread| unread['PostId'] } }
 end
 
+# Displays the user with the user_id :user
 get '/user/:user' do
   db = DataBase.new
   user = db.get_user(params[:user].to_i)
@@ -90,6 +100,7 @@ get '/user/:user' do
   slim :user, locals: { user: user, image: image }
 end
 
+# Edit page for user with user_id :user
 get '/user/:user/edit' do
   if session[:user_id] != params[:user].to_i
     redirect to("/user/#{params[:user]}")
@@ -102,15 +113,19 @@ get '/user/:user/edit' do
   slim :edit_user, locals: { user: user, image: image }
 end
 
+# Registration page
 get '/register' do
   slim :register
 end
 
+# Login page
 get '/login' do
   slim :login
 end
 
-#### Actions which do not need an id ###
+# This handles requests from other routes.
+# This route covers all actions which do not operate on a specific
+# object and therefore do not need to specify and id.
 post '/action/:type/:action' do
   db = DataBase.new
   case params[:type]
@@ -189,7 +204,8 @@ post '/action/:type/:action' do
   error_with('BADREQ')
 end
 
-#### Actions which do need an id ###
+# This handles requests from other routes.
+# This route covers all actions which operate on a specific board.
 post '/action/board/:board_id/:action' do
   db = DataBase.new
   case params[:action]
@@ -201,6 +217,10 @@ post '/action/board/:board_id/:action' do
   end
   error_with('BADREQ')
 end
+
+
+# This handles requests from other routes.
+# This route covers all actions which operate on a specific thread.
 post '/action/thread/:thread_id/:action' do
   db = DataBase.new
   case params[:action]
@@ -228,6 +248,8 @@ post '/action/thread/:thread_id/:action' do
   error_with('BADREQ')
 end
 
+# This handles requests from other routes.
+# This route covers all actions which operate on a specific post.
 post '/action/post/:post_id/:action' do
   db = DataBase.new
   case params[:action]

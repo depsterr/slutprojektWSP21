@@ -37,3 +37,7 @@ table {
 img {
 	max-width: 80%;
 }
+
+.unread {
+	color: red;
+}

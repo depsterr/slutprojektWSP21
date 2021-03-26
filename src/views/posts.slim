@@ -44,7 +44,12 @@ h2
         td colspan="2"
           table
             tr
-              p = Time.at(post['PostCreationDate'])
+              - if unreads.include? post['PostId']
+                p
+                  = "#{Time.at(post['PostCreationDate'])} "
+                  span.unread = "(NEW)"
+              - else
+                p = Time.at(post['PostCreationDate'])
             - if logged_in?
               tr
                 td
@@ -61,4 +66,3 @@ h2
                         input type="hidden" name="board_id" value="#{posts[:board]['BoardId']}"
                         input type="hidden" name="thread_id" value="#{posts[:thread]['ThreadId']}"
                         input type="submit" value="delete"
-
