@@ -70,6 +70,10 @@ Idag så har jag implementerat en user page, user setting page som låter en lad
 
 Jag har implementerat ett watch + unread system
 
-# Fri 12e mars
+# Fredag 12e mars
 
 Idag så har jag fixat mina routes så att de följer REST standarden.
+
+# Fredag 26e mars
+
+Idag så har jag fixat så att unread posts har en liten (NEW) tag, samt dokumenterat mina routes lite.
