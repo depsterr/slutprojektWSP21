@@ -470,6 +470,16 @@ class DataBase
     nil
   end
 
+  # Mark post as unread for mods
+  # the first in the thread.
+  # @param post_id [Integer] post to report
+  # @return [nil]
+  public def report(post_id)
+    @db.execute("SELECT UserId FROM User WHERE UserPrivilege>0").each do |admin|
+      @db.execute("INSERT INTO UserUnreadPost(UserId, PostId) VALUES(?,?)", admin['UserId'], post_id)
+    end
+  end
+
   # Delete a post. Deltes thread if the post deleted was
   # the first in the thread.
   # @param post_id [Integer] post to delete
@@ -595,6 +605,20 @@ class DataBase
     end
   end
 
+  # Edit a post
+  # @param content [String] new content of post
+  # @param post_id [Integer] post to edit
+  # @param caller_id [Integer] issuer of call
+  # @return [nil,String] returns error string on failure
+  public def edit_post(content, post_id, caller_id)
+    post = get_post(post_id)
+
+    return $error['NOPOST'] if post.nil?
+    return $error['BADPERM'] if post['UserId'] != caller_id
+
+    @db.execute("UPDATE Post SET PostContent=? WHERE PostId=?", content, post_id)
+  end
+
   # Mark a thread as unread
   # @param thread_id [Integer] thread to mark as read
   # @param caller_id [Integer] issuer of call
@@ -688,6 +712,15 @@ class DataBase
     image.first
   end
 
+  # Return the post of the given post_id from the database
+  # @param post_id [Integer] the post id to be retrieved
+  # @return [Hash,nil] returns post hash if found or nil if not found
+  public def get_post(post_id)
+    post = @db.execute("SELECT * FROM Post WHERE PostId=?", post_id)
+    return nil if post.empty?
+    return post.first
+  end
+
   ########################
   ### DEBUG DEFS BELOW ###
   ########################
@@ -745,14 +778,6 @@ class DataBase
     return thread.first
   end
 
-  # Return the post of the given post_id from the database
-  # @param post_id [Integer] the post id to be retrieved
-  # @return [Hash,nil] returns post hash if found or nil if not found
-  private def get_post(post_id)
-    post = @db.execute("SELECT * FROM Post WHERE PostId=?", post_id)
-    return nil if post.empty?
-    return post.first
-  end
 end
 
 # Handles validations
