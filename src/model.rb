@@ -256,7 +256,7 @@ class DataBase
       return $error['BADUSER'] unless Validator.username? name
 
       result = @db.execute("SELECT * FROM User WHERE UserName=?", name)
-      unless result.empty?
+      if result.empty?
         @db.execute("UPDATE User SET UserName=? WHERE UserId=?", name, caller_id)
       else
         return $error['USERTAKEN'] if result['UserId'] != caller_id
