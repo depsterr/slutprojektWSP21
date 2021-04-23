@@ -28,5 +28,5 @@ task :reset do
 end
 
 file doc: sources do |t|
-  sh "yardoc #{t.prerequisites.join(" ")}"
+  sh "yardoc --plugin yard-sinatra #{t.prerequisites.join(" ")}"
 end

@@ -533,7 +533,7 @@ class DataBase
     return $error['BADPERM'] unless user["UserPrivilege"] > 0 ||
       thread["UserId"] == user["UserId"] # actually checks board owner, not thread
 
-    @db.execute("UPDATE Thread SET ThreadStickied=? WHERE ThreadId=?", sticky ? 1 : 0,
+    @db.execute("UPDATE Thread SET ThreadStickied=? WHERE ThreadId=?", sticky,
                 thread_id)
 
     nil
@@ -585,6 +585,8 @@ class DataBase
 
     return [] if get_user(caller_id).nil?
     @db.execute("SELECT * FROM UserUnreadPost INNER JOIN Post ON UserUnreadPost.PostId=Post.PostId "\
+                "INNER JOIN Thread ON Thread.ThreadId = Post.ThreadId "\
+                "INNER JOIN User   ON Thread.UserId   = User.UserId   "\
                 "WHERE UserUnreadPost.UserId=?", caller_id)
   end
 

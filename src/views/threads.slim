@@ -40,7 +40,6 @@ h2
           td
             b = "#{unread.map do |hash| hash['ThreadId'] end.length} Unread Post!"
     - if logged_in?
-        / TODO: watch/unwatch/mark read, sticky/unsticky
         table
           tr
             td
@@ -63,3 +62,9 @@ h2
                   form action="/action/thread/#{thread['ThreadId']}/delete" method="post"
                     input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
                     input type="submit" value="delete"
+              - if admin?
+                td
+                  form action="/action/thread/#{thread['ThreadId']}/sticky" method="post"
+                    input type="hidden" name="sticky" value="#{thread['ThreadStickied'] == 0 ? 1 : 0}"
+                    input type="hidden" name="board_id" value="#{threads[:board]['BoardId']}"
+                    input type="submit" value="#{thread['ThreadStickied'] == 0 ? "Sticky" : "Unsticky"}"

@@ -11,6 +11,7 @@ require_relative 'view.rb'
 
 enable :sessions
 
+
 # TODO:
 #  - [x] finish model.rb TODOs
 #  - [x] Home/Boards page
@@ -25,7 +26,7 @@ enable :sessions
 #  - [x] Watch
 #  - [x] Mark as read
 #  - [x] Highlight unread posts in threads
-#  - [ ] Sticky
+#  - [x] Sticky
 #  - [ ] Unread posts/notification page
 #  - [x] Fix REST routes
 #  - [#] Editing (boards and thread titles?)
@@ -39,6 +40,7 @@ before do
   unless session[:user_id] == 0
     session[:user] = db.get_user(session[:user_id])
     session[:image] = db.get_image(session[:user_id])
+    session[:unread] = db.get_unread(session[:user_id]).length
   end
 end
 
@@ -59,6 +61,18 @@ end
 get '/home' do
   db = DataBase.new
   slim :boards, locals: { boards: db.get_boards }
+end
+
+# Show unread threads
+get '/unread' do
+  db = DataBase.new
+  watches = []
+  unread = []
+  if logged_in?
+    watches = db.get_watched(session[:user_id])
+    unread  = db.get_unread(session[:user_id])
+  end
+  slim :unread, locals: { watches: watches, unread: unread }
 end
 
 # Displays the threads of the board with board_id :board
@@ -232,6 +246,12 @@ end
 post '/action/thread/:thread_id/:action' do
   db = DataBase.new
   case params[:action]
+  when "sticky"
+    result = db.update_sticky_thread(params[:thread_id],
+                              params["sticky"].to_i,
+                              session[:user_id])
+    handle_error(result)
+    redirect to("/board/#{request["board_id"]}")
   when "delete"
     result = db.delete_thread(params[:thread_id],
                               session[:user_id])
@@ -241,17 +261,20 @@ post '/action/thread/:thread_id/:action' do
     result = db.start_watching(params[:thread_id],
                                session[:user_id])
     handle_error(result)
-    redirect to("/board/#{request["board_id"]}")
+    redirect to("/board/#{request["board_id"]}") unless request["unread"] == "true"
+    redirect to("/unread")
   when "unwatch"
     result = db.stop_watching(params[:thread_id],
                               session[:user_id])
     handle_error(result)
-    redirect to("/board/#{request["board_id"]}")
+    redirect to("/board/#{request["board_id"]}") unless request["unread"] == "true"
+    redirect to("/unread")
   when "mark_read"
     result = db.mark_thread_read(params[:thread_id],
                                  session[:user_id])
     handle_error(result)
-    redirect to("/board/#{request["board_id"]}")
+    redirect to("/board/#{request["board_id"]}") unless request["unread"] == "true"
+    redirect to("/unread")
   end
   error_with('BADREQ')
 end

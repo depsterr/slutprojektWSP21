@@ -1,0 +1,41 @@
+h2 Unread messages
+- if logged_in?
+  - unless unread.nil? || unread.empty?
+    - unread.each do |thread|
+      hr
+      table
+        tr
+          td.auto
+            img.pfp_tiny alt="profile picute" src="#{local_to_web_path(thread['ImageFilepath'])}"
+          td
+            - if thread['UserPrivilege'] > 0
+              a.admin href="/user/#{thread['UserId']}"
+                span.material-icons title="Administrator" shield
+                = thread['UserName']
+            - else
+              a href="/user/#{thread['UserId']}" = thread['UserName']
+          td
+            a href = "/thread/#{thread['ThreadId']}" = thread['ThreadName']
+          td = Time.at(thread['ThreadCreationDate']) 
+          - if unread.map do |hash| hash['ThreadId'] end.include? thread['ThreadId']
+            td
+              b = "#{unread.map do |hash| hash['ThreadId'] end.length} Unread Post!"
+        table
+          tr
+            td
+              - if watches.include? thread['ThreadId'] 
+                form action="/action/thread/#{thread['ThreadId']}/unwatch" method="post"
+                  input type="hidden" name="unread" value="true"
+                  input type="hidden" name="board_id" value="#{thread['BoardId']}"
+                  input type="hidden" name="thread_id" value=""
+                  input type="submit" value="Stop watching"
+              - else
+                form action="/action/thread/#{thread['ThreadId']}/watch" method="post"
+                  input type="hidden" name="unread" value="true"
+                  input type="hidden" name="board_id" value="#{thread['BoardId']}"
+                  input type="submit" value="Watch thread"
+              td
+                form action="/action/thread/#{thread['ThreadId']}/mark_read" method="post"
+                  input type="hidden" name="unread" value="true"
+                  input type="hidden" name="board_id" value="#{thread['BoardId']}"
+                  input type="submit" value="Mark as read"
