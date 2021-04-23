@@ -27,9 +27,9 @@ enable :sessions
 #  - [x] Mark as read
 #  - [x] Highlight unread posts in threads
 #  - [x] Sticky
-#  - [ ] Unread posts/notification page
+#  - [x] Unread posts/notification page
 #  - [x] Fix REST routes
-#  - [#] Editing (boards and thread titles?)
+#  - [x] Editing
 #  - [x] Reporting
 #  - [ ] Extra model.rb todos
 
@@ -58,12 +58,14 @@ get '/error' do
 end
 
 # The homepage, displays the current boards
+# @see DataBase.get_boards
 get '/home' do
   db = DataBase.new
   slim :boards, locals: { boards: db.get_boards }
 end
 
 # Show unread threads
+# @see DataBase.get_unread
 get '/unread' do
   db = DataBase.new
   watches = []
@@ -75,7 +77,10 @@ get '/unread' do
   slim :unread, locals: { watches: watches, unread: unread }
 end
 
-# Displays the threads of the board with board_id :board
+# Displays the threads of a board
+# @param [Integer] :board, board to grab threads from
+# @see DataBase.get_threads
+# @see DataBase.get_watched
 get '/board/:board' do
   db = DataBase.new
   threads = db.get_threads(params[:board].to_i)
@@ -90,6 +95,7 @@ get '/board/:board' do
 end
 
 # Displays the posts of the thread with thread_id :thread
+# @see DataBase.get_posts
 get '/thread/:thread' do
   db = DataBase.new
   posts = db.get_posts(params[:thread].to_i)
@@ -104,7 +110,10 @@ get '/thread/:thread' do
   slim :posts, locals: { posts: posts, unreads: unreads.map { |unread| unread['PostId'] } }
 end
 
-# Displays the user with the user_id :user
+# Displays a users page
+# @param [Integer] :user, user who's page to display
+# @see DataBase.get_user
+# @see DataBase.get_image
 get '/user/:user' do
   db = DataBase.new
   user = db.get_user(params[:user].to_i)
@@ -114,7 +123,10 @@ get '/user/:user' do
   slim :user, locals: { user: user, image: image }
 end
 
-# Edit page for user with user_id :user
+# Edit page for as user
+# @param [Integer] :user, user who's page to edit
+# @see DataBase.get_user
+# @see DataBase.get_image
 get '/user/:user/edit' do
   if session[:user_id] != params[:user].to_i
     redirect to("/user/#{params[:user]}")
@@ -127,7 +139,10 @@ get '/user/:user/edit' do
   slim :edit_user, locals: { user: user, image: image }
 end
 
-# Edit page for editing a post
+# Edit page for posts
+# @param [Integer] :post_id, post to edit
+# @see DataBase.get_user
+# @see DataBase.get_post
 get '/post/:post_id/edit' do
   db = DataBase.new
   post = db.get_post params[:post_id].to_i
@@ -148,6 +163,16 @@ end
 # This handles requests from other routes.
 # This route covers all actions which do not operate on a specific
 # object and therefore do not need to specify and id.
+# @param [String] :type, the type of oject to act upon (board, user, thread, post)
+# @param [String] :action, the action to take on said object
+# @see DataBase#register
+# @see DataBase#login
+# @see DataBase#update_user
+# @see DataBase#create_board
+# @see DataBase#create_thread
+# @see DataBase#delete_thread
+# @see DataBase#create_post
+# @see DataBase#delete_post
 post '/action/:type/:action' do
   db = DataBase.new
   case params[:type]
@@ -226,8 +251,10 @@ post '/action/:type/:action' do
   error_with('BADREQ')
 end
 
-# This handles requests from other routes.
 # This route covers all actions which operate on a specific board.
+# @param [String] :board_id, the id of the board to act upon
+# @param [String] :action, the action to take on said object
+# @see DataBase#delete_board
 post '/action/board/:board_id/:action' do
   db = DataBase.new
   case params[:action]
@@ -241,8 +268,14 @@ post '/action/board/:board_id/:action' do
 end
 
 
-# This handles requests from other routes.
 # This route covers all actions which operate on a specific thread.
+# @param [String] :thread_id, the id of the thread to act upon
+# @param [String] :action the action to take on said object
+# @see DataBase#update_sticky_thread
+# @see DataBase#delete_thread
+# @see DataBase#start_watching
+# @see DataBase#stop_watching
+# @see DataBase#mark_thread_read
 post '/action/thread/:thread_id/:action' do
   db = DataBase.new
   case params[:action]
@@ -279,8 +312,12 @@ post '/action/thread/:thread_id/:action' do
   error_with('BADREQ')
 end
 
-# This handles requests from other routes.
 # This route covers all actions which operate on a specific post.
+# @param [String] :post_id, the id of the post to act upon
+# @param [String] :action, the action to take on said object
+# @see DataBase#delete_post
+# @see DataBase#report
+# @see DataBase#edit_post
 post '/action/post/:post_id/:action' do
   db = DataBase.new
   case params[:action]
@@ -288,11 +325,8 @@ post '/action/post/:post_id/:action' do
     result = db.delete_post(params[:post_id],
                             session[:user_id])
     handle_error(result)
-    if result
-      redirect to("/thread/#{request["thread_id"]}")
-    else
-      redirect to("/board/#{request["board_id"]}")
-    end
+    redirect to("/thread/#{request["thread_id"]}") if result
+    redirect to("/board/#{request["board_id"]}")
   when "report"
     result = db.report(params[:post_id])
     handle_error(result)

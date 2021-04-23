@@ -81,3 +81,7 @@ Idag så har jag skapat en sida för att redigera posts samt implementerat en re
 # Fredag 26e mars
 
 Idag så har jag fixat så att unread posts har en liten (NEW) tag, samt dokumenterat mina routes lite.
+
+# Fredaga 23e april
+
+Idag så har jag implementerat ett sticky interface samt en unread sida. Jag har även förbättrar min dokumentation.
