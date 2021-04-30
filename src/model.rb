@@ -30,35 +30,63 @@ helpers do
   end
 
   # Redirect to error with error string
+  # @param str [String] error message
   def error_str(str)
     session[:error] = str
     redirect to('/error')
   end
 
   # Redirect to error with error code 
+  # @param errorcode [String] key for $error hash
   def error_with(errorcode)
     error_str($error[errorcode])
   end
 
   # See if val is error
+  # @param val [Any] value to compare against an error
+  # @return [Bool] true if val is a String
   def error?(val)
     val.class == String
   end
 
-  # Handle return value
+  # Handle return value. Does nothing if val is not a string
+  # if val is a string then error with that string.
+  # @param val [Any] value to handle error for
   def handle_error(val)
     error_str(val) if error? val
   end
 
   # See if user is logged in
+  # @return [Bool]
   def logged_in?
     session[:user_id] > 0 && !session[:user].nil?
   end
   
   # See if user is admin
+  # @return [Bool]
   def admin?
     logged_in? && session[:user]['UserPrivilege'] > 0
   end
+
+  # Set up user session
+  def set_up_session
+    db = DataBaseHandler.new
+    session[:user_id] = 0 if session[:user_id].nil?
+    unless session[:user_id] == 0
+      session[:user] = db.get_user(session[:user_id])
+      session[:image] = db.get_image(session[:user_id])
+      session[:unread] = db.get_unread(session[:user_id]).length
+    end
+  end
+
+  # Get the current error and then clear it
+  # @return [String] current error
+  def get_error
+    error = session[:error]
+    session.delete(:error)
+    return error
+  end
+
 end
 
 # Exit program printing an error message
@@ -98,10 +126,10 @@ end
 #  - [x] Image handling
 # DO IF YOU HAVE THE TIME:
 #  - [ ] Let user edit most fields
-class DataBase
-  # Create a new DataBase connection
+class DataBaseHandler
+  # Create a new DataBaseHandler connection
   # @param path [String] the path to the database file
-  # @return [DataBase]
+  # @return [DataBaseHandler]
   public def initialize(path = "db/database.sqlite")
     raise TypeError if path.class != String
     @db = SQLite3::Database.new path

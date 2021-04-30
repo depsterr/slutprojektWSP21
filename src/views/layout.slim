@@ -24,7 +24,7 @@ html lang="en"
                 input type="submit" value="Log out"
             - if session[:unread] > 0
               td
-                form action="/unread" method="get"
+                form action="/user/unread" method="get"
                   input type="submit" value="View [#{session[:unread]}] unread messages"
           - else
             / Use forms instead of here to keep the look consistent with the log out button which needs to be a form

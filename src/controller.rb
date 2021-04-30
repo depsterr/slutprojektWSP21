@@ -20,7 +20,7 @@ enable :sessions
 #  - [x] Error page
 #  - [x] Register page
 #  - [x] Log in page
-#  - [x] REST routes för att interagera med DataBase klassen
+#  - [x] REST routes för att interagera med DataBaseHandler klassen
 #  - [x] User profile page
 #  - [x] User options
 #  - [x] Watch
@@ -35,13 +35,7 @@ enable :sessions
 
 # Set up user_id and user
 before do
-  db = DataBase.new
-  session[:user_id] = 0 if session[:user_id].nil?
-  unless session[:user_id] == 0
-    session[:user] = db.get_user(session[:user_id])
-    session[:image] = db.get_image(session[:user_id])
-    session[:unread] = db.get_unread(session[:user_id]).length
-  end
+  set_up_session
 end
 
 # Redirect traffic to / to the home route
@@ -52,37 +46,36 @@ end
 # Displays the session error string and then resets
 # the session error string.
 get '/error' do
-  error = session[:error]
-  session.delete(:error)
-  slim :error, locals: { error: error }
+  error = get_error()
+  slim :"home/error", locals: { error: error }
 end
 
 # The homepage, displays the current boards
-# @see DataBase.get_boards
+# @see DataBaseHandler.get_boards
 get '/home' do
-  db = DataBase.new
-  slim :boards, locals: { boards: db.get_boards }
+  db = DataBaseHandler.new
+  slim :"home/index", locals: { boards: db.get_boards }
 end
 
 # Show unread threads
-# @see DataBase.get_unread
-get '/unread' do
-  db = DataBase.new
+# @see DataBaseHandler.get_unread
+get '/user/unread' do
+  db = DataBaseHandler.new
   watches = []
   unread = []
   if logged_in?
     watches = db.get_watched(session[:user_id])
     unread  = db.get_unread(session[:user_id])
   end
-  slim :unread, locals: { watches: watches, unread: unread }
+  slim :"user/unread", locals: { watches: watches, unread: unread }
 end
 
 # Displays the threads of a board
 # @param [Integer] :board, board to grab threads from
-# @see DataBase.get_threads
-# @see DataBase.get_watched
+# @see DataBaseHandler.get_threads
+# @see DataBaseHandler.get_watched
 get '/board/:board' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   threads = db.get_threads(params[:board].to_i)
   handle_error(threads)
   watches = []
@@ -91,13 +84,13 @@ get '/board/:board' do
     watches = db.get_watched(session[:user_id])
     unread  = db.get_unread(session[:user_id])
   end
-  slim :threads, locals: { threads: threads, watches: watches, unread: unread }
+  slim :"board/index", locals: { threads: threads, watches: watches, unread: unread }
 end
 
 # Displays the posts of the thread with thread_id :thread
-# @see DataBase.get_posts
+# @see DataBaseHandler.get_posts
 get '/thread/:thread' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   posts = db.get_posts(params[:thread].to_i)
   handle_error(posts)
   unreads = []
@@ -107,57 +100,57 @@ get '/thread/:thread' do
                                  session[:user_id])
     handle_error(result)
   end
-  slim :posts, locals: { posts: posts, unreads: unreads.map { |unread| unread['PostId'] } }
+  slim :"thread/index", locals: { posts: posts, unreads: unreads.map { |unread| unread['PostId'] } }
 end
 
 # Displays a users page
 # @param [Integer] :user, user who's page to display
-# @see DataBase.get_user
-# @see DataBase.get_image
+# @see DataBaseHandler.get_user
+# @see DataBaseHandler.get_image
 get '/user/:user' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   user = db.get_user(params[:user].to_i)
   handle_error(user)
   image = db.get_image(user['UserId'])
   handle_error(image)
-  slim :user, locals: { user: user, image: image }
+  slim :"user/index", locals: { user: user, image: image }
 end
 
 # Edit page for as user
 # @param [Integer] :user, user who's page to edit
-# @see DataBase.get_user
-# @see DataBase.get_image
+# @see DataBaseHandler.get_user
+# @see DataBaseHandler.get_image
 get '/user/:user/edit' do
   if session[:user_id] != params[:user].to_i
     redirect to("/user/#{params[:user]}")
   end
-  db = DataBase.new
+  db = DataBaseHandler.new
   user = db.get_user(params[:user].to_i)
   handle_error(user)
   image = db.get_image(user['UserId'])
   handle_error(image)
-  slim :edit_user, locals: { user: user, image: image }
+  slim :"user/edit", locals: { user: user, image: image }
 end
 
 # Edit page for posts
 # @param [Integer] :post_id, post to edit
-# @see DataBase.get_user
-# @see DataBase.get_post
+# @see DataBaseHandler.get_user
+# @see DataBaseHandler.get_post
 get '/post/:post_id/edit' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   post = db.get_post params[:post_id].to_i
   user = db.get_user session[:user_id]
-  slim :edit_post, locals: { post: post, user: user }
+  slim :"post/edit", locals: { post: post, user: user }
 end
 
 # Registration page
 get '/register' do
-  slim :register
+  slim :"user/register"
 end
 
 # Login page
 get '/login' do
-  slim :login
+  slim :"user/login"
 end
 
 # This handles requests from other routes.
@@ -165,16 +158,16 @@ end
 # object and therefore do not need to specify and id.
 # @param [String] :type, the type of oject to act upon (board, user, thread, post)
 # @param [String] :action, the action to take on said object
-# @see DataBase#register
-# @see DataBase#login
-# @see DataBase#update_user
-# @see DataBase#create_board
-# @see DataBase#create_thread
-# @see DataBase#delete_thread
-# @see DataBase#create_post
-# @see DataBase#delete_post
+# @see DataBaseHandler#register
+# @see DataBaseHandler#login
+# @see DataBaseHandler#update_user
+# @see DataBaseHandler#create_board
+# @see DataBaseHandler#create_thread
+# @see DataBaseHandler#delete_thread
+# @see DataBaseHandler#create_post
+# @see DataBaseHandler#delete_post
 post '/action/:type/:action' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   case params[:type]
   when "user"
     case params[:action]
@@ -254,9 +247,9 @@ end
 # This route covers all actions which operate on a specific board.
 # @param [String] :board_id, the id of the board to act upon
 # @param [String] :action, the action to take on said object
-# @see DataBase#delete_board
+# @see DataBaseHandler#delete_board
 post '/action/board/:board_id/:action' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   case params[:action]
   when "delete"
     result = db.delete_board(params[:board_id],
@@ -271,13 +264,13 @@ end
 # This route covers all actions which operate on a specific thread.
 # @param [String] :thread_id, the id of the thread to act upon
 # @param [String] :action the action to take on said object
-# @see DataBase#update_sticky_thread
-# @see DataBase#delete_thread
-# @see DataBase#start_watching
-# @see DataBase#stop_watching
-# @see DataBase#mark_thread_read
+# @see DataBaseHandler#update_sticky_thread
+# @see DataBaseHandler#delete_thread
+# @see DataBaseHandler#start_watching
+# @see DataBaseHandler#stop_watching
+# @see DataBaseHandler#mark_thread_read
 post '/action/thread/:thread_id/:action' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   case params[:action]
   when "sticky"
     result = db.update_sticky_thread(params[:thread_id],
@@ -295,19 +288,19 @@ post '/action/thread/:thread_id/:action' do
                                session[:user_id])
     handle_error(result)
     redirect to("/board/#{request["board_id"]}") unless request["unread"] == "true"
-    redirect to("/unread")
+    redirect to("/user/unread")
   when "unwatch"
     result = db.stop_watching(params[:thread_id],
                               session[:user_id])
     handle_error(result)
     redirect to("/board/#{request["board_id"]}") unless request["unread"] == "true"
-    redirect to("/unread")
+    redirect to("/user/unread")
   when "mark_read"
     result = db.mark_thread_read(params[:thread_id],
                                  session[:user_id])
     handle_error(result)
     redirect to("/board/#{request["board_id"]}") unless request["unread"] == "true"
-    redirect to("/unread")
+    redirect to("/user/unread")
   end
   error_with('BADREQ')
 end
@@ -315,11 +308,11 @@ end
 # This route covers all actions which operate on a specific post.
 # @param [String] :post_id, the id of the post to act upon
 # @param [String] :action, the action to take on said object
-# @see DataBase#delete_post
-# @see DataBase#report
-# @see DataBase#edit_post
+# @see DataBaseHandler#delete_post
+# @see DataBaseHandler#report
+# @see DataBaseHandler#edit_post
 post '/action/post/:post_id/:action' do
-  db = DataBase.new
+  db = DataBaseHandler.new
   case params[:action]
   when "delete"
     result = db.delete_post(params[:post_id],
