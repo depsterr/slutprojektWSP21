@@ -33,7 +33,7 @@ helpers do
   # @param str [String] error message
   def error_str(str)
     session[:error] = str
-    redirect to('/error')
+    redirect to('/home/error')
   end
 
   # Redirect to error with error code 

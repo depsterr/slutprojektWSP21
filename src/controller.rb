@@ -45,7 +45,7 @@ end
 
 # Displays the session error string and then resets
 # the session error string.
-get '/error' do
+get '/home/error' do
   error = get_error()
   slim :"home/error", locals: { error: error }
 end
